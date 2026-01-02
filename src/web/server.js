@@ -1,19 +1,32 @@
 // src/web/server.js
+require("dotenv").config();
+
 const http = require("http");
 const { Server } = require("socket.io");
 const express = require("express");
 const path = require("path");
+const cookieParser = require("cookie-parser");
+const crypto = require("crypto");
+const apiRoutes = require("./routes/api");
 
 const webRoutes = require("./routes");
 const { SimulationSource } = require("../services/simulation/simulationSource");
 const { SensorProcessor } = require("../services/processing/sensorProcessor");
+const { pingDb } = require("../services/database/connection");
+const { listUsers, createUser } = require("../services/database/userStore");
+const { ensureSession, getActiveUser, setActiveUser } = require("../services/database/sessionStore");
 
 function createWebServer({ port = 3000 } = {}) {
   const app = express();
 
+  app.use(express.json());
+  app.use(cookieParser());
+
   // Static files
   app.use(express.static(path.join(__dirname, "public")));
-  app.use("/", webRoutes);
+  //app.use("/", webRoutes); //weglassen weil ich api routes verwende
+  app.use("/api", apiRoutes);
+
 
   const httpServer = http.createServer(app);
 
@@ -52,4 +65,13 @@ module.exports = { createWebServer };
 if (require.main === module) {
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   createWebServer({ port });
+}
+
+function getOrCreateSessionId(req, res) {
+  let sid = req.cookies.sid;
+  if (!sid) {
+    sid = crypto.randomUUID();
+    res.cookie("sid", sid, { httpOnly: true, sameSite: "lax" });
+  }
+  return sid;
 }

@@ -5,19 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Nullweg-Joystick Dashboard</title>
 
-  <!-- Bootstrap 5 (CDN) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <style>
     body { background: #f8f9fa; }
     .sidebar {
-      min-height: calc(100vh - 56px - 40px); /* Navbar 56px, Footer ca. 40px */
+      min-height: calc(100vh - 56px - 40px);
       border-right: 1px solid #dee2e6;
       background: #ffffff;
     }
-    .content-wrap {
-      min-height: calc(100vh - 56px - 40px);
-    }
+    .content-wrap { min-height: calc(100vh - 56px - 40px); }
     #joystickCanvas {
       background: #fff;
       border: 1px solid #dee2e6;
@@ -34,10 +31,12 @@
       border-radius: 999px;
       display: inline-block;
       margin-right: 8px;
-      background: #dc3545; /* default: red */
+      background: #dc3545;
     }
-    .status-dot.ok { background: #198754; } /* green */
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .status-dot.ok { background: #198754; }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
   </style>
 </head>
 
@@ -46,9 +45,16 @@
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
       <span class="navbar-brand">Nullweg-Joystick Dashboard</span>
-      <div class="ms-auto text-light d-flex align-items-center gap-2">
-        <span id="connDot" class="status-dot"></span>
-        <span class="small">Status: <span id="connText">getrennt</span></span>
+
+      <div class="ms-auto text-light d-flex align-items-center gap-3">
+        <div class="small">
+          Benutzer aktiv: <span class="mono" id="activeUserName">none</span>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <span id="connDot" class="status-dot"></span>
+          <span class="small">Status: <span id="connText">getrennt</span></span>
+        </div>
       </div>
     </div>
   </nav>
@@ -60,8 +66,9 @@
         <div class="fw-semibold mb-3">Menü</div>
 
         <div class="list-group mb-4">
-          <a class="list-group-item list-group-item-action active" href="#">Dashboard</a>
-          <a class="list-group-item list-group-item-action" href="#">Filter (Platzhalter)</a>
+          <a class="list-group-item list-group-item-action active" href="#" id="navDashboard">Dashboard</a>
+          <a class="list-group-item list-group-item-action" href="#" id="navUsers">Benutzer</a>
+          <a class="list-group-item list-group-item-action" href="#" id="navFilter">Filter (Platzhalter)</a>
         </div>
 
         <div class="fw-semibold mb-2">Live-Werte</div>
@@ -82,52 +89,77 @@
         <div class="d-flex justify-content-between"><span>FSR4</span><span class="mono" id="val-fsr4">0</span></div>
       </aside>
 
-      <!-- Main -->
+      <!-- Main column (einziges col-Element rechts) -->
       <main class="col-12 col-md-9 col-lg-10 p-4 content-wrap">
-        <div class="row g-3">
-          <div class="col-12">
-            <h4 class="mb-1">Joystick Visualisierung (4 Quadranten)</h4>
-            <div class="text-muted small mb-3">
-              Ursprung (0,0) ist in der Mitte, Achsen und Gitterlinien sind sichtbar, aktueller Wert als roter Punkt.
+        <!-- Dashboard View -->
+        <div id="viewDashboard">
+          <div class="row g-3">
+            <div class="col-12">
+              <h4 class="mb-1">Joystick Visualisierung (4 Quadranten)</h4>
+              <div class="text-muted small mb-3">
+                Ursprung (0,0) ist in der Mitte, Achsen und Gitterlinien sind sichtbar, aktueller Wert als roter Punkt.
+              </div>
             </div>
-          </div>
 
-          <div class="col-12 col-xl-7">
-            <div class="card">
-              <div class="card-body">
-                <canvas id="joystickCanvas" width="520" height="520"></canvas>
+            <div class="col-12 col-xl-7">
+              <div class="card">
+                <div class="card-body">
+                  <canvas id="joystickCanvas" width="520" height="520"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-xl-5">
+              <div class="card mb-3">
+                <div class="card-header">Systemstatus</div>
+                <div class="card-body">
+                  <div class="d-flex justify-content-between">
+                    <span>Datenquelle</span>
+                    <span class="mono" id="val-source">simulation</span>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <span>Update-Rate</span>
+                    <span class="mono"><span id="val-hz">-</span> Hz</span>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <span>Letztes Paket</span>
+                    <span class="mono" id="val-ts">-</span>
+                  </div>
+                  <div class="small text-muted mt-3">
+                    Hinweis: In dieser Phase kommt alles aus der Simulation; UART kann später ohne UI-/Processing-Änderungen zugeschaltet werden.
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">Hinweise</div>
+                <div class="card-body small text-muted">
+                  Wenn der Punkt nicht läuft: DevTools-Konsole prüfen, ob <span class="mono">joystick:update</span>
+                  Events ankommen und ob die Canvas-Skripte geladen werden.
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="col-12 col-xl-5">
-            <div class="card mb-3">
-              <div class="card-header">Systemstatus</div>
-              <div class="card-body">
-                <div class="d-flex justify-content-between">
-                  <span>Datenquelle</span>
-                  <span class="mono" id="val-source">simulation</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                  <span>Update-Rate</span>
-                  <span class="mono"><span id="val-hz">-</span> Hz</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                  <span>Letztes Paket</span>
-                  <span class="mono" id="val-ts">-</span>
-                </div>
-                <div class="small text-muted mt-3">
-                  Hinweis: In dieser Phase kommt alles aus der Simulation; UART kann später ohne UI-/Processing-Änderungen zugeschaltet werden.
-                </div>
-              </div>
-            </div>
+        <!-- Users View -->
+        <div id="viewUsers" class="d-none">
+          <h4 class="mb-3">Benutzer</h4>
 
-            <div class="card">
-              <div class="card-header">Hinweise</div>
-              <div class="card-body small text-muted">
-                Wenn der Punkt nicht läuft: DevTools-Konsole prüfen, ob <span class="mono">joystick:update</span> Events ankommen und ob die Canvas-Skripte geladen werden.
+          <div class="card mb-3">
+            <div class="card-body">
+              <label class="form-label">Neuen Benutzer anlegen</label>
+              <div class="input-group">
+                <input id="newUserName" class="form-control" placeholder="Name">
+                <button id="btnCreateUser" class="btn btn-primary" type="button">Anlegen</button>
               </div>
+              <div class="form-text">Kein Passwort (vertrauenswürdiger Nutzerkreis).</div>
             </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">Vorhandene Benutzer</div>
+            <div class="list-group list-group-flush" id="userList"></div>
           </div>
         </div>
       </main>
@@ -142,19 +174,18 @@
     </div>
   </footer>
 
-  <!-- Socket.IO client: served by the server at /socket.io/socket.io.js -->
   <script src="/socket.io/socket.io.js"></script>
-
-  <!-- Deine Scripts -->
   <script src="/js/websocket-client.js"></script>
+
+  <!-- Wichtig: User-View Logik -->
+  <script src="/js/users-page.js"></script>
+
   <script src="/js/canvas-joystick.js"></script>
 
   <script>
-    // Kleine UI-Helfer für Verbindungsstatus + Footer
     const connDot = document.getElementById("connDot");
     const connText = document.getElementById("connText");
 
-    // socket ist global aus websocket-client.js
     if (typeof socket !== "undefined") {
       socket.on("connect", () => {
         connDot.classList.add("ok");
@@ -173,7 +204,8 @@
 
         if (tsEl) tsEl.textContent = new Date(payload.ts).toLocaleTimeString();
         if (footSrc) footSrc.textContent = payload.source || "simulation";
-        if (footHz) footHz.textContent = (window.joystickState && window.joystickState.lastHz) ? window.joystickState.lastHz : "-";
+        if (footHz) footHz.textContent =
+          (window.joystickState && window.joystickState.lastHz) ? window.joystickState.lastHz : "-";
       });
     }
   </script>
