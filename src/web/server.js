@@ -1,39 +1,55 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path'); // für absolute Pfade
+// src/web/server.js
+const http = require("http");
+const { Server } = require("socket.io");
+const express = require("express");
+const path = require("path");
 
-const app = express();
-const PORT = 3001;
+const webRoutes = require("./routes");
+const { SimulationSource } = require("../services/simulation/simulationSource");
+const { SensorProcessor } = require("../services/processing/sensorProcessor");
 
-// Statische Dateien ausliefern
-app.use(express.static(path.join(__dirname, 'public')));
+function createWebServer({ port = 3000 } = {}) {
+  const app = express();
 
-// Optional: Root-Route auf index.html
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+  // Static files
+  app.use(express.static(path.join(__dirname, "public")));
+  app.use("/", webRoutes);
 
-// HTTP-Server erstellen
-const server = http.createServer(app);
+  const httpServer = http.createServer(app);
 
-// Socket.io einrichten
-const io = new Server(server, {
-    cors: { origin: "*" }
-});
+  const io = new Server(httpServer, {
+    // same-origin default passt für lokale Pi-WebApp; CORS erst nötig bei getrennten Origins
+  });
 
-io.on('connection', (socket) => {
-    console.log('Neue WebSocket-Verbindung:', socket.id);
-    socket.on('message', (data) => {
-        console.log('Nachricht vom Client:', data);
-        io.emit('message', `Server hat empfangen: ${data}`);
+  // --- Pipeline: DataSource -> Processing -> Socket.IO ---
+  const processor = new SensorProcessor({ outMin: -100, outMax: 100 });
+
+  const source = new SimulationSource({ hz: 50, radius: 80, periodMs: 4000 });
+  source.on("data", (raw) => {
+    const processed = processor.process(raw);
+    io.emit("joystick:update", {
+      ts: raw.ts,
+      source: raw.source,
+      ...processed
     });
-    socket.on('disconnect', () => {
-        console.log('Client getrennt:', socket.id);
-    });
-});
+  });
 
-// Server starten
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is listening at http://0.0.0.0:${PORT}`);
-});
+  io.on("connection", (socket) => {
+    socket.emit("server:hello", { ts: Date.now(), msg: "connected" });
+  });
+
+  httpServer.listen(port, () => {
+    source.start();
+    console.log(`Web server listening on http://localhost:${port}`);
+  });
+
+  return { app, io, httpServer, source };
+}
+
+module.exports = { createWebServer };
+
+// Wenn server.js direkt mit "node src/web/server.js" gestartet wird:
+if (require.main === module) {
+  const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+  createWebServer({ port });
+}
