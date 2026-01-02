@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <input id="msg" placeholder="Nachricht">
+    <button onclick="sendMessage()">Senden</button>
+
+    <ul id="messages"></ul>
+
+    <script>
+        const socket = io('http://localhost:3001');
+
+        socket.on('connect', () => {
+            console.log('Mit Server verbunden:', socket.id);
+        });
+
+        socket.on('message', (msg) => {
+            const li = document.createElement('li');
+            li.textContent = msg;
+            document.getElementById('messages').appendChild(li);
+        });
+
+        function sendMessage() {
+            const msg = document.getElementById('msg').value;
+            socket.emit('message', msg);
+        }
+    </script>
+</body>
+</html>
