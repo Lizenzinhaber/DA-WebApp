@@ -1,70 +1,145 @@
-// src/services/simulation/simulationSource.js
-const EventEmitter = require("node:events");
-
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-
 /**
- * SimulationSource erzeugt zyklisch (fsr1..fsr4) als Rohdaten 0..4095
- * und emittiert sie als Event: "data".
- *
- * Ziel: komplette Verarbeitungskette testen (Simulation -> Processing -> Socket.IO -> UI).
+ * @file simulationSource.js
+ * @brief Simulierte Sensor-Datenquelle für Tests/Demo
+ * 
+ * Gibt zirkuläre Bewegungsmuster aus (hilfreich zum Debuggen)
+ * Kompatibel mit UARTSource API für nahtlose Integration
  */
+
+const { EventEmitter } = require("events");
+
 class SimulationSource extends EventEmitter {
-  constructor({
-    hz = 50,
-    radius = 80,      // Kreisradius in %-Skala (0..100)
-    periodMs = 4000   // Dauer einer Umdrehung
-  } = {}) {
+  /**
+   * @param {Object} options - Konfiguration
+   * @param {number} options.hz - Sampling-Rate (z.B. 50 Hz)
+   * @param {number} options.radius - Radius der zirkulären Bewegung [0...100]
+   * @param {number} options.periodMs - Periode der zirkulären Bewegung [ms]
+   */
+  constructor({ hz = 50, radius = 80, periodMs = 4000 } = {}) {
     super();
+
     this.hz = hz;
     this.radius = radius;
     this.periodMs = periodMs;
-    this.timer = null;
+
+    this.isRunning = false;
+    this.intervalId = null;
+    this.messageCount = 0;
+    this.startTime = 0;
   }
 
-  start() {
-    if (this.timer) return;
+  /**
+   * Starte Simulation
+   * @returns {Promise<void>}
+   */
+  async start() {
+    if (this.isRunning) {
+      return;
+    }
 
-    const intervalMs = Math.round(1000 / this.hz);
+    console.log(`[SimulationSource] Starting simulation @ ${this.hz} Hz`);
+    this.isRunning = true;
+    this.messageCount = 0;
+    this.startTime = Date.now();
 
-    this.timer = setInterval(() => {
-      const now = Date.now();
-      const phase = (now % this.periodMs) / this.periodMs; // 0..1
-      const angle = 2 * Math.PI * phase;
+    const intervalMs = 1000 / this.hz;
 
-      // Uhrzeigersinn: mathematisch erreicht man das durch -sin(...)
-      const xIdeal = Math.round(this.radius * Math.cos(angle));
-      const yIdeal = Math.round(-this.radius * Math.sin(angle));
-
-      // Rückrechnung auf FSR so, dass später serverseitig wieder gilt:
-      // x = fsr2 - fsr4, y = fsr1 - fsr3 (nach Normierung)
-      // diff in [-4095..4095]
-      const diffX = Math.round((xIdeal / 100) * 4095);
-      const diffY = Math.round((yIdeal / 100) * 4095);
-
-      // Symmetrisch um Mitte -> verhindert dauerndes Clamping bei großen Amplituden
-      const mid = 2048;
-
-      const fsr2 = clamp(mid + Math.round(diffX / 2), 0, 4095);
-      const fsr4 = clamp(mid - Math.round(diffX / 2), 0, 4095);
-
-      const fsr1 = clamp(mid + Math.round(diffY / 2), 0, 4095);
-      const fsr3 = clamp(mid - Math.round(diffY / 2), 0, 4095);
-
-      this.emit("data", {
-        fsr1, fsr2, fsr3, fsr4,
-        source: "simulation",
-        ts: now
-      });
+    this.intervalId = setInterval(() => {
+      this._generateSensorData();
     }, intervalMs);
+
+    this.emit("started");
   }
 
-  stop() {
-    if (!this.timer) return;
-    clearInterval(this.timer);
-    this.timer = null;
+  /**
+   * Stoppe Simulation
+   * @returns {Promise<void>}
+   */
+  async stop() {
+    if (!this.isRunning) {
+      return;
+    }
+
+    console.log(`[SimulationSource] Stopped (${this.messageCount} messages)`);
+    this.isRunning = false;
+
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+
+    this.emit("stopped");
+  }
+
+  /**
+   * Generiere simulierte Sensordaten
+   * @private
+   */
+  _generateSensorData() {
+    const now = Date.now();
+    const elapsed = now - this.startTime;
+    const phase = (elapsed % this.periodMs) / this.periodMs;
+    const angle = phase * 2 * Math.PI;
+
+    // Zirkuläre Bewegung
+    const vx = Math.sin(angle); // [-1...+1]
+    const vy = Math.cos(angle); // [-1...+1]
+
+    // Simuliere Rohwerte basierend auf Vektor
+    const maxRaw = 4095;
+    const centering = maxRaw / 2; // 2047
+
+    // Rohwerte berechnen aus Vektor
+    // Einfaches Modell: normalisierte Vektor-Komponenten zu rohen ADC-Werten
+    const u = Math.max(0, Math.min(maxRaw, centering - vy * 800)); // up
+    const l = Math.max(0, Math.min(maxRaw, centering - vx * 800)); // left
+    const d = Math.max(0, Math.min(maxRaw, centering + vy * 800)); // down
+    const r = Math.max(0, Math.min(maxRaw, centering + vx * 800)); // right
+
+    // Gefilterte Werte = leicht verzögert
+    const filtered = {
+      u: Math.round(u * 0.95),
+      l: Math.round(l * 0.95),
+      d: Math.round(d * 0.95),
+      r: Math.round(r * 0.95)
+    };
+
+    const data = {
+      ts: now,
+      source: "simulation",
+      raw: {
+        u: Math.round(u),
+        l: Math.round(l),
+        d: Math.round(d),
+        r: Math.round(r)
+      },
+      filtered: filtered,
+      normalized: {
+        u: u / maxRaw,
+        l: l / maxRaw,
+        d: d / maxRaw,
+        r: r / maxRaw
+      },
+      vx: vx,
+      vy: vy
+    };
+
+    this.messageCount++;
+    this.emit("data", data);
+  }
+
+  /**
+   * Gibt Status aus
+   * @returns {Object}
+   */
+  getStatus() {
+    return {
+      isRunning: this.isRunning,
+      messageCount: this.messageCount,
+      hz: this.hz,
+      radius: this.radius,
+      periodMs: this.periodMs
+    };
   }
 }
 

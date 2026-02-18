@@ -1,0 +1,10 @@
+# Udev-Regel für /dev/ttyS0 und weitere Serial Ports
+# Datei: /etc/udev/rules.d/50-serial.rules
+
+# Erlaubt Mitgliedern der 'dialout' Gruppe Zugriff auf Serial Ports
+SUBSYSTEMS=="tty", ATTRS{subsystem}=="serial", OWNER="root", GROUP="dialout", MODE="0660"
+
+# Alternative: Für spezifische Ports
+KERNEL=="ttyS0", GROUP="dialout", MODE="0660"
+KERNEL=="ttyAMA0", GROUP="dialout", MODE="0660"
+KERNEL=="ttyUSB*", GROUP="dialout", MODE="0660"

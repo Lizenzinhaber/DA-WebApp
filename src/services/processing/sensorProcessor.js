@@ -1,46 +1,94 @@
-// src/services/processing/sensorProcessor.js
-
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
+/**
+ * @file sensorProcessor.js
+ * @brief Sensor-Datenverarbeitung: Normalisierung, Vektorberechnung, Skalierung
+ * 
+ * Verantwortlichkeit:
+ *  - Normalisierung von Sensor-Rohwerten
+ *  - Joystick-Vektor-Berechnung
+ *  - Ausgabe-Range-Skalierung (z.B. -100...+100 für UI)
+ *  - Filtering/Glättung (optional)
+ */
 
 /**
- * Verarbeitet 4 FSR-Rohwerte (0..4095) zu Joystick (x,y).
- *
- * Typisches Mapping:
- *   x_diff = fsr2 - fsr4
- *   y_diff = fsr1 - fsr3
- *
- * Normierung:
- *   diff in [-4095..4095] -> Output in [-100..100]
+ * SensorProcessor: Transformiert Sensor-Rohwerte zu Ausgabe-Format
  */
 class SensorProcessor {
-  constructor({
-    adcMin = 0,
-    adcMax = 4095,
-    outMin = -100,
-    outMax = 100
-  } = {}) {
-    this.adcMin = adcMin;
-    this.adcMax = adcMax;
+  /**
+   * @param {Object} options - Konfiguration
+   * @param {number} options.outMin - Minimale Ausgabe (z.B. -100)
+   * @param {number} options.outMax - Maximale Ausgabe (z.B. 100)
+   * @param {number} options.deadzone - Deadzone [0.0...1.0] (default: 0.0)
+   */
+  constructor({ outMin = -100, outMax = 100, deadzone = 0.0 } = {}) {
     this.outMin = outMin;
     this.outMax = outMax;
-
-    this.maxDiff = adcMax - adcMin; // 4095
+    this.deadzone = Math.max(0, Math.min(1, deadzone));
+    this.range = outMax - outMin;
   }
 
-  process({ fsr1, fsr2, fsr3, fsr4 }) {
-    const xDiff = fsr2 - fsr4;
-    const yDiff = fsr1 - fsr3;
+  /**
+   * Verarbeite Sensor-Daten
+   * 
+   * Input: {
+   *   ts: number,
+   *   source: string,
+   *   raw/filtered/normalized: { u, l, d, r },
+   *   vx, vy: number
+   * }
+   * 
+   * Output: {
+   *   ts: number,
+   *   source: string,
+   *   x: number,           // skaliert auf [outMin...outMax]
+   *   y: number,           // skaliert auf [outMin...outMax]
+   *   magnitude: number,   // ||[x,y]||
+   *   deadzone: boolean,   // true wenn in Deadzone
+   *   raw: { u, l, d, r }, // Original Rohwerte
+   * }
+   * 
+   * @param {Object} rawData - Sensor-Daten von UARTSource/SimulationSource
+   * @returns {Object} Verarbeitete Daten
+   */
+  process(rawData) {
+    // Extrahiere Vektor (vx, vy schon normalisiert auf [-1.0...+1.0] von UARTSource)
+    let vx = rawData.vx || 0;
+    let vy = rawData.vy || 0;
 
-    const x = clamp(Math.round((xDiff / this.maxDiff) * this.outMax), this.outMin, this.outMax);
-    const y = clamp(Math.round((yDiff / this.maxDiff) * this.outMax), this.outMin, this.outMax);
+    // Berechne Magnitude (Länge des Vektors)
+    const magnitude = Math.sqrt(vx * vx + vy * vy);
+
+    // Deadzone anwenden
+    let isInDeadzone = false;
+    if (magnitude < this.deadzone) {
+      vx = 0;
+      vy = 0;
+      isInDeadzone = true;
+    }
+
+    // Skaliere auf Ausgabe-Range
+    // vx, vy sind im Bereich [-1.0...+1.0]
+    // Skaliere zu [outMin...outMax]
+    const x = vx * (this.range / 2) + (this.outMin + this.outMax) / 2;
+    const y = vy * (this.range / 2) + (this.outMin + this.outMax) / 2;
 
     return {
-      x,
-      y,
-      raw: { fsr1, fsr2, fsr3, fsr4 }
+      ts: rawData.ts || Date.now(),
+      source: rawData.source || "unknown",
+      x: Math.round(x),
+      y: Math.round(y),
+      magnitude: parseFloat(magnitude.toFixed(4)),
+      deadzone: isInDeadzone,
+      raw: rawData.raw || { u: 0, l: 0, d: 0, r: 0 }
     };
+  }
+
+  /**
+   * Batch-Verarbeitung (für Test-Szenarien)
+   * @param {Array<Object>} dataArray - Array von Sensor-Daten
+   * @returns {Array<Object>} Array von verarbeiteten Daten
+   */
+  processBatch(dataArray) {
+    return dataArray.map((data) => this.process(data));
   }
 }
 

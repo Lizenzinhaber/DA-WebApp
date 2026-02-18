@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node src/web/server.js",
+    "dev": "node src/web/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,6 +16,16 @@
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "mysql2": "^3.16.0",
+    "serialport": "^13.0.0",
     "socket.io": "^4.8.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lizenzinhaber/DA-WebApp.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Lizenzinhaber/DA-WebApp/issues"
+  },
+  "homepage": "https://github.com/Lizenzinhaber/DA-WebApp#readme"
 }
