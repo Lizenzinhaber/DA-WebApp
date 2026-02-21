@@ -347,6 +347,130 @@
             }
         }
 
+        /* Filter Presets */
+        .preset-selector {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            margin-bottom: 16px;
+        }
+
+        .preset-selector select {
+            flex: 1;
+            max-width: 300px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            background: white;
+        }
+
+        .preset-selector button {
+            padding: 8px 16px;
+            background: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .preset-selector button:hover {
+            background: #1565c0;
+        }
+
+        .preset-selector button.delete {
+            background: #c62828;
+        }
+
+        .preset-selector button.delete:hover {
+            background: #ad1457;
+        }
+
+        .preset-create-form {
+            background: #fafafa;
+            padding: 16px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            margin-top: 12px;
+        }
+
+        .preset-create-form input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .preset-create-form .form-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            margin-bottom: 12px;
+        }
+
+        .preset-create-form .form-group {
+            flex: 1;
+        }
+
+        .preset-create-form label {
+            display: block;
+            font-weight: 600;
+            color: #444;
+            font-size: 12px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .preset-create-form button {
+            padding: 8px 16px;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .preset-create-form button:hover {
+            background: #1b5e20;
+        }
+
+        .preset-list {
+            margin-top: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .preset-item {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .preset-item:hover {
+            background: #f0f0f0;
+        }
+
+        .preset-item-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .preset-item-meta {
+            color: #666;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .grid {
@@ -537,6 +661,97 @@
 
         <!-- Main Grid -->
         <div class="grid">
+            <!-- Filter Settings Card -->
+            <div class="card">
+                <h3>Filter Einstellungen</h3>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <label style="font-weight:600;color:#444;font-size:13px;">Filter Typ</label>
+                    <select id="filterType" style="padding:8px;border-radius:4px;border:1px solid #ddd;max-width:320px;">
+                        <option value="ma">Gleitend Mitteln (MA)</option>
+                        <option value="lpf">Exponentielles Gleitend Mitteln (LPF)</option>
+                    </select>
+                        <div id="filterDesc" style="font-size:13px;color:#555;margin-top:6px;max-width:520px;">
+                            Gleitend Mitteln (MA): Robust gegen Ausreißer, gute Rauschunterdrückung bei moderatem Verzögerung.
+                        </div>
+
+                    <div style="display:flex;gap:8px;align-items:center;max-width:520px;">
+                        <div style="flex:1;">
+                            <label style="font-weight:600;color:#444;font-size:13px;">Noise Gate (0-4095)</label>
+                            <input id="noiseGate" type="number" min="0" max="4095" value="500" style="width:100%;padding:8px;border-radius:4px;border:1px solid #ddd;" />
+                            <div style="font-size:12px;color:#666;margin-top:4px;">Schwellwert: Unter diesem Wert gilt der Sensor als nicht gedrückt (0). Richtwerte: 0–500 = sehr empfindlich; 500–1000 = normal; >1000 = weniger empfindlich (ignoriert leichte Berührungen).</div>
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-weight:600;color:#444;font-size:13px;">FSR Max (0-4095)</label>
+                            <input id="fsrMax" type="number" min="0" max="4095" value="4000" style="width:100%;padding:8px;border-radius:4px;border:1px solid #ddd;" />
+                            <div style="font-size:12px;color:#666;margin-top:4px;">Max-Druck für Normalisierung (0–1): ADC-Wert, der 100% entspricht. Standard: 4000. Höher setzen (z. B. 4095) wenn sehr hohe Drücke nötig sind, sonst sättigt der Joystick früher.</div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:12px;align-items:center;">
+                        <button id="btnSendFilter" style="background:#1976d2;color:#fff;padding:10px 14px;border-radius:4px;border:none;font-weight:700;cursor:pointer;">Senden</button>
+                        <div id="filterStatus" style="font-weight:600;color:#666;">Nicht gesendet</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Filter Presets Card -->
+            <div class="card">
+                <h3>Filter Voreinstellungen</h3>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div class="preset-selector">
+                        <select id="presetSelect" style="flex:1;">
+                            <option value="">-- Keine Voreinstellung --</option>
+                        </select>
+                        <button id="btnLoadPreset" style="padding:8px 16px;background:#1976d2;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">Laden</button>
+                        <button id="btnDeletePreset" style="padding:8px 16px;background:#c62828;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">Löschen</button>
+                    </div>
+
+                    <div id="presetCreateToggle" style="padding:12px;background:#fafafa;border-radius:4px;border:1px solid #ddd;cursor:pointer;text-align:center;font-weight:600;color:#1976d2;user-select:none;">
+                        + Neue Voreinstellung erstellen
+                    </div>
+
+                    <div id="presetCreateForm" class="preset-create-form" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Name der Voreinstellung</label>
+                                <input id="presetName" type="text" placeholder="z.B. Empfindlich, Normal, Robust" style="width:100%;" />
+                            </div>
+                            <div class="form-group">
+                                <label>Erstellt von</label>
+                                <input id="presetCreator" type="text" placeholder="Ihr Name" style="width:100%;" />
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:12px;">
+                            <button id="btnCreatePreset" style="padding:8px 16px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">Voreinstellung speichern</button>
+                            <button id="btnCancelPreset" style="padding:8px 16px;background:#999;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">Abbrechen</button>
+                        </div>
+                    </div>
+
+                    <div id="presetList" class="preset-list" style="display:none;"></div>
+                </div>
+            </div>
+            <!-- HID Mouse Settings Card -->
+            <div class="card">
+                <h3>HID Maus Einstellungen</h3>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;gap:8px;max-width:520px;">
+                        <div style="flex:1;">
+                            <label style="font-weight:600;color:#444;font-size:13px;">Polling (ms) 5-200</label>
+                            <input id="hidPoll" type="number" min="1" max="60000" value="10" style="width:100%;padding:8px;border-radius:4px;border:1px solid #ddd;" />
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-weight:600;color:#444;font-size:13px;">Max Delta (px) 0-20</label>
+                            <input id="hidDelta" type="number" min="0" max="255" value="10" style="width:100%;padding:8px;border-radius:4px;border:1px solid #ddd;" />
+                        </div>
+                    </div>
+
+                    <div id="hidDesc" style="font-size:13px;color:#555;max-width:520px;">Polling steuert wie häufig die Maus bewegt wird; kleiner = empfindlicher. Max Delta begrenzt die Bewegung pro Poll.</div>
+
+                    <div style="display:flex;gap:12px;align-items:center;">
+                        <button id="btnSendHid" style="background:#1976d2;color:#fff;padding:10px 14px;border-radius:4px;border:none;font-weight:700;cursor:pointer;">Senden</button>
+                        <div id="hidStatus" style="font-weight:600;color:#666;">Nicht gesendet</div>
+                    </div>
+                </div>
+            </div>
             <!-- Joystick Card -->
             <div class="card">
                 <h3>Joystick Vector</h3>
@@ -622,6 +837,18 @@
             socket.on("system:error", (error) => {
                 errorCount++;
                 showError(error.message);
+            });
+
+            socket.on("filter:ack", (resp) => {
+                const status = document.getElementById("filterStatus");
+                if (!resp) return;
+                if (resp.success) {
+                    status.textContent = "Gesendet ✓";
+                    status.style.color = "#2e7d32";
+                } else {
+                    status.textContent = `Fehler: ${resp.message || 'unknown'}`;
+                    status.style.color = "#c62828";
+                }
             });
 
             socket.emit("request:status");
@@ -745,7 +972,261 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             initSocket();
+            // Setup Filter UI handlers
+            const btn = document.getElementById("btnSendFilter");
+            if (btn) {
+                btn.addEventListener("click", () => {
+                    sendFilterSettings();
+                });
+            }
+            const hidBtn = document.getElementById('btnSendHid');
+            if (hidBtn) {
+                hidBtn.addEventListener('click', () => {
+                    sendHidSettings();
+                });
+            }
+
+            // Load filter presets
+            loadPresets();
+            document.getElementById('presetCreateToggle').addEventListener('click', () => {
+                document.getElementById('presetCreateToggle').style.display = 'none';
+                document.getElementById('presetCreateForm').style.display = 'block';
+            });
+            document.getElementById('btnCancelPreset').addEventListener('click', () => {
+                document.getElementById('presetCreateForm').style.display = 'none';
+                document.getElementById('presetCreateToggle').style.display = 'block';
+            });
+            document.getElementById('btnCreatePreset').addEventListener('click', createPreset);
+            document.getElementById('btnLoadPreset').addEventListener('click', () => {
+                const presetId = Number(document.getElementById('presetSelect').value);
+                if (presetId) loadPresetSettings(presetId);
+            });
+            document.getElementById('btnDeletePreset').addEventListener('click', deletePreset);
+
+            // Request current config from server/ESP
+            if (socket && socket.connected) {
+                socket.emit('request:config');
+            } else {
+                // If not connected yet, request after short delay
+                setTimeout(() => {
+                    if (socket) socket.emit('request:config');
+                }, 800);
+            }
         });
+
+        function sendFilterSettings() {
+            if (!socket || !socket.connected) {
+                showError("Nicht verbunden: Verbindung zum Server fehlt");
+                return;
+            }
+
+            const type = document.getElementById("filterType").value || "ma";
+            const noise = Number(document.getElementById("noiseGate").value) || 0;
+            const fsr = Number(document.getElementById("fsrMax").value) || 0;
+
+            // Clamp values
+            const noiseClamped = Math.max(0, Math.min(4095, Math.floor(noise)));
+            const fsrClamped = Math.max(0, Math.min(4095, Math.floor(fsr)));
+
+            const payload = {
+                filter: type, // 'ma' or 'lpf'
+                noiseGate: noiseClamped,
+                fsrMax: fsrClamped
+            };
+
+            socket.emit("filter:set", payload, (ack) => {
+                const status = document.getElementById("filterStatus");
+                if (ack && ack.success) {
+                    status.textContent = "Gesendet ✓";
+                    status.style.color = "#2e7d32";
+                    // Auto-reset nach 3 Sekunden
+                    setTimeout(() => {
+                        status.textContent = "Nicht gesendet";
+                        status.style.color = "#666";
+                    }, 3000);
+                } else {
+                    status.textContent = `Fehler: ${ack && ack.message ? ack.message : 'no ack'}`;
+                    status.style.color = "#c62828";
+                    // Auto-reset nach 5 Sekunden
+                    setTimeout(() => {
+                        status.textContent = "Nicht gesendet";
+                        status.style.color = "#666";
+                    }, 5000);
+                }
+            });
+        }
+
+        function sendHidSettings() {
+            if (!socket || !socket.connected) {
+                showError('Nicht verbunden: Verbindung zum Server fehlt');
+                return;
+            }
+
+            const pollMs = Number(document.getElementById('hidPoll').value) || 10;
+            const maxDelta = Number(document.getElementById('hidDelta').value) || 10;
+
+            const payload = { pollMs: Math.max(1, Math.min(60000, Math.floor(pollMs))), maxDelta: Math.max(0, Math.min(255, Math.floor(maxDelta))) };
+
+            socket.emit('hid:set', payload, (ack) => {
+                const s = document.getElementById('hidStatus');
+                if (ack && ack.success) {
+                    s.textContent = 'Gesendet ✓';
+                    s.style.color = '#2e7d32';
+                    // Auto-reset nach 3 Sekunden
+                    setTimeout(() => {
+                        s.textContent = 'Nicht gesendet';
+                        s.style.color = '#666';
+                    }, 3000);
+                } else {
+                    s.textContent = `Fehler: ${ack && ack.message ? ack.message : 'no ack'}`;
+                    s.style.color = '#c62828';
+                    // Auto-reset nach 5 Sekunden
+                    setTimeout(() => {
+                        s.textContent = 'Nicht gesendet';
+                        s.style.color = '#666';
+                    }, 5000);
+                }
+            });
+        }
+
+        // Handle incoming config from server
+        socket && socket.on && socket.on('system:config', (cfg) => {
+            try {
+                if (!cfg) return;
+                // Fill fields if values present
+                if (cfg.filterType !== undefined) {
+                    const sel = document.getElementById('filterType');
+                    if (sel) sel.value = (cfg.filterType === 2) ? 'lpf' : 'ma';
+                }
+                if (cfg.noiseGate !== undefined) document.getElementById('noiseGate').value = cfg.noiseGate;
+                if (cfg.fsrMax !== undefined) document.getElementById('fsrMax').value = cfg.fsrMax;
+                if (cfg.hidPollMs !== undefined) document.getElementById('hidPoll').value = cfg.hidPollMs;
+                if (cfg.hidMaxDelta !== undefined) document.getElementById('hidDelta').value = cfg.hidMaxDelta;
+
+                // Update descriptions based on filter choice
+                updateFilterDescription();
+            } catch (err) {
+                console.warn('system:config handler error', err.message);
+            }
+        });
+
+        // Update small description text when filter selection changes
+        function updateFilterDescription() {
+            const sel = document.getElementById('filterType');
+            const desc = document.getElementById('filterDesc');
+            if (!sel || !desc) return;
+            if (sel.value === 'ma') {
+                desc.textContent = 'Gleitend Mitteln (MA): Robust gegen Ausreißer, gute Rauschunterdrückung bei moderatem Verzögerung.';
+            } else {
+                desc.textContent = 'LPF (Tiefpass): Reagiert glatter und weniger verzögert bei langsamen Änderungen, besser bei kontinuierlichen Signalen.';
+            }
+        }
+
+        document.getElementById('filterType') && document.getElementById('filterType').addEventListener('change', updateFilterDescription);
+
+        // ============================================================
+        // Filter Presets Management
+        // ============================================================
+        let allPresets = [];
+
+        async function loadPresets() {
+            try {
+                const response = await fetch('/api/filter-presets');
+                allPresets = await response.json();
+                updatePresetDropdown();
+            } catch (err) {
+                console.error('Error loading presets:', err);
+            }
+        }
+
+        function updatePresetDropdown() {
+            const select = document.getElementById('presetSelect');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">-- Keine Voreinstellung --</option>';
+            allPresets.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                select.appendChild(opt);
+            });
+        }
+
+        function loadPresetSettings(presetId) {
+            const preset = allPresets.find(p => p.id === presetId);
+            if (!preset) return;
+
+            document.getElementById('filterType').value = preset.filter_type || 'ma';
+            document.getElementById('noiseGate').value = preset.noise_gate || 500;
+            document.getElementById('fsrMax').value = preset.fsr_max || 4000;
+            updateFilterDescription();
+        }
+
+        async function createPreset() {
+            const name = document.getElementById('presetName').value.trim();
+            const creator = document.getElementById('presetCreator').value.trim() || 'Unbekannt';
+            const filterType = document.getElementById('filterType').value;
+            const noiseGate = Number(document.getElementById('noiseGate').value);
+            const fsrMax = Number(document.getElementById('fsrMax').value);
+
+            if (!name) {
+                showError('Presetname erforderlich');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/filter-presets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name, filterType, noiseGate, fsrMax, createdBy: creator
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    showError('Fehler: ' + (err.error || 'Unbekannter Fehler'));
+                    return;
+                }
+
+                showError('');
+                document.getElementById('presetName').value = '';
+                document.getElementById('presetCreator').value = '';
+                document.getElementById('presetCreateForm').style.display = 'none';
+                document.getElementById('presetCreateToggle').style.display = 'block';
+                
+                loadPresets();
+            } catch (err) {
+                showError('Fehler: ' + err.message);
+            }
+        }
+
+        async function deletePreset() {
+            const presetId = document.getElementById('presetSelect').value;
+            if (!presetId) {
+                showError('Keine Voreinstellung ausgewählt');
+                return;
+            }
+
+            if (!confirm('Voreinstellung wirklich löschen?')) return;
+
+            try {
+                const response = await fetch(`/api/filter-presets/${presetId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    showError('Fehler: ' + (err.error || 'Unbekannter Fehler'));
+                    return;
+                }
+
+                document.getElementById('presetSelect').value = '';
+                loadPresets();
+            } catch (err) {
+                showError('Fehler: ' + err.message);
+            }
+        }
 
         setInterval(() => {
             if (socket && socket.connected) {

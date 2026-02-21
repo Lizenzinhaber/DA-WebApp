@@ -105,6 +105,36 @@ class UARTSource extends EventEmitter {
     this.client.on("ack", (ack) => {
       this.log(`✓ ACK from ESP32`);
     });
+
+    // Config Response (from ESP32 in reply to CONFIG_REQ)
+    this.client.on("config_resp", (obj) => {
+      try {
+        const payload = obj && obj.payload ? obj.payload : null;
+        this.log("✓ Config response received from ESP32", payload ? payload.length : 0);
+        // Bewahre rohen Payload und emittiere als Event zur weiteren Verarbeitung
+        this.currentConfig = payload;
+        this.emit("config", payload);
+      } catch (err) {
+        this.log("⚠️ Error handling config_resp:", err.message);
+      }
+    });
+  }
+
+  /**
+   * Fordere Konfiguration vom ESP32 an (CONFIG_REQ)
+   * @returns {Promise<boolean>}
+   */
+  async requestConfig() {
+    if (!this.client) return false;
+    if (typeof this.client.requestSensorData === 'function') {
+      try {
+        return await this.client.requestSensorData();
+      } catch (err) {
+        this.log('⚠️ requestConfig error:', err.message);
+        return false;
+      }
+    }
+    return false;
   }
 
   /**

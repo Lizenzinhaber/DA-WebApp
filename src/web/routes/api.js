@@ -4,6 +4,7 @@ const crypto = require("crypto");
 
 const { listUsers, createUser } = require("../../services/database/userStore");
 const { ensureSession, getActiveUser, setActiveUser } = require("../../services/database/sessionStore");
+const { listFilterPresets, getFilterPreset, createFilterPreset, updateFilterPreset, deleteFilterPreset } = require("../../services/database/filterPresetStore");
 
 const router = express.Router();
 
@@ -49,6 +50,60 @@ router.post("/session/active-user", async (req, res) => {
 
   const activeUser = await setActiveUser(sid, userId);
   res.json({ sid, activeUser: activeUser?.id ? activeUser : null });
+});
+
+// --- Filter Presets ---
+router.get("/filter-presets", async (req, res) => {
+  const presets = await listFilterPresets();
+  res.json(presets);
+});
+
+router.get("/filter-presets/:id", async (req, res) => {
+  const preset = await getFilterPreset(Number(req.params.id));
+  if (!preset) {
+    return res.status(404).json({ error: "Preset not found" });
+  }
+  res.json(preset);
+});
+
+router.post("/filter-presets", async (req, res) => {
+  const { name, filterType, noiseGate, fsrMax, createdBy } = req.body;
+  
+  if (!name) {
+    return res.status(400).json({ error: "name required" });
+  }
+  
+  const preset = await createFilterPreset(name, filterType, noiseGate, fsrMax, createdBy);
+  if (!preset) {
+    return res.status(400).json({ error: "Failed to create preset" });
+  }
+  
+  res.json(preset);
+});
+
+router.put("/filter-presets/:id", async (req, res) => {
+  const { name, filterType, noiseGate, fsrMax } = req.body;
+  
+  if (!name) {
+    return res.status(400).json({ error: "name required" });
+  }
+  
+  const ok = await updateFilterPreset(Number(req.params.id), name, filterType, noiseGate, fsrMax);
+  if (!ok) {
+    return res.status(400).json({ error: "Failed to update preset" });
+  }
+  
+  const preset = await getFilterPreset(Number(req.params.id));
+  res.json(preset);
+});
+
+router.delete("/filter-presets/:id", async (req, res) => {
+  const ok = await deleteFilterPreset(Number(req.params.id));
+  if (!ok) {
+    return res.status(400).json({ error: "Failed to delete preset" });
+  }
+  
+  res.json({ success: true });
 });
 
 module.exports = router;
