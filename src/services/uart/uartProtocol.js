@@ -20,7 +20,11 @@ const MSG_TYPE = {
   ACK: 0x11,
   ERROR: 0x12,
   CONFIG_REQ: 0x13,
-  CONFIG_RESP: 0x14
+  CONFIG_RESP: 0x14,
+  PASSWORD_REQ: 0x40,   // ESP32 → Pi: Passwort-Anfrage
+  PASSWORD_DATA: 0x41,  // Pi → ESP32: Passwort-Daten
+  PASSWORD_ACK: 0x42,   // ESP32 → Pi: Passwort-Bestätigung
+  AP_STATUS: 0x43       // Pi → ESP32: AP-Status (Clients, Timer, Flags)
 };
 
 /**

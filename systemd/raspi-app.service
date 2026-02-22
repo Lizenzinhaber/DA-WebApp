@@ -1,0 +1,25 @@
+[Unit]
+Description=DA-WebApp (Node.js Sensor Dashboard + WiFi AP)
+Documentation=https://github.com/Lizenzinhaber/DA-WebApp
+After=network.target NetworkManager.service mariadb.service
+Wants=mariadb.service
+Requires=NetworkManager.service
+
+[Service]
+Type=simple
+User=chris
+WorkingDirectory=/home/chris/DA-WebApp
+ExecStart=/home/chris/.nvm/versions/node/v24.13.1/bin/node src/web/server.js
+Restart=on-failure
+RestartSec=10
+StartLimitBurst=5
+StartLimitIntervalSec=60
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=da-webapp
+
+# Environment
+EnvironmentFile=/home/chris/DA-WebApp/.env
+
+[Install]
+WantedBy=multi-user.target

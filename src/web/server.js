@@ -17,7 +17,7 @@ const { pingDb } = require("../services/database/connection");
 const { listUsers, createUser } = require("../services/database/userStore");
 const { ensureSession, getActiveUser, setActiveUser } = require("../services/database/sessionStore");
 const { initializeFilterPresetsTable } = require("../services/database/filterPresetStore");
-const APManager = require("../services/ap/apManager");
+const { APService } = require("../services/system/apService");
 
 /**
  * Erstelle Web-Server mit Sensor-Datenerfassung
@@ -33,7 +33,7 @@ const APManager = require("../services/ap/apManager");
 function createWebServer({ port = 3000 } = {}) {
   const app = express();
 
-  app.use(express.json());
+  app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
 
   // Static files
@@ -210,6 +210,12 @@ function createWebServer({ port = 3000 } = {}) {
 
   // WebSocket Connection Handler
   io.on("connection", (socket) => {
+    // Idle-Timer zurücksetzen bei WebSocket-Verbindung
+    // (ein verbundener Browser-Client zählt als aktiver User)
+    if (apService) {
+      apService.resetIdleTimer();
+    }
+
     socket.emit("server:hello", {
       ts: Date.now(),
       msg: "connected",
@@ -340,6 +346,76 @@ function createWebServer({ port = 3000 } = {}) {
     });
   });
 
+  // --- AP Service (Hotspot + Passwort + Idle-Shutdown) ---
+  const apEnabled = process.env.AP_SSID || process.env.AP_IFACE;
+  let apService = null;
+
+  if (apEnabled && useUART) {
+    apService = new APService({ uartSource: source, logging: true });
+
+    apService.on("started", (info) => {
+      console.log(`📡 Hotspot aktiv: SSID="${info.ssid}"`);
+      io.emit("system:ap", { status: "active", ssid: info.ssid });
+    });
+
+    apService.on("clients_changed", ({ count }) => {
+      io.emit("system:ap", { status: "active", clients: count });
+    });
+
+    apService.on("idle_shutdown", () => {
+      io.emit("system:shutdown", { reason: "idle_timeout", ts: Date.now() });
+    });
+
+    apService.on("error", (err) => {
+      console.error(`[APService] Error: ${err.message}`);
+    });
+  }
+
+  // API: AP Status Endpoint
+  app.get("/api/ap/status", (req, res) => {
+    if (apService) {
+      res.json(apService.getStatus());
+    } else {
+      res.json({ active: false, message: "AP Service nicht aktiv" });
+    }
+  });
+
+  // API: AP Settings – Lesen
+  app.get("/api/ap/settings", (req, res) => {
+    if (apService) {
+      res.json({ idleTimeoutMs: apService.getIdleTimeout() });
+    } else {
+      // Auch ohne laufenden AP Service die gespeicherten Settings zurückgeben
+      const { getIdleTimeoutMs } = require("../services/system/apSettingsStore");
+      res.json({ idleTimeoutMs: getIdleTimeoutMs() });
+    }
+  });
+
+  // API: AP Settings – Schreiben (Idle-Timer ändern)
+  app.put("/api/ap/settings", (req, res) => {
+    const { idleTimeoutMs } = req.body || {};
+
+    if (idleTimeoutMs === undefined || typeof idleTimeoutMs !== "number") {
+      return res.status(400).json({ error: "idleTimeoutMs (number) required" });
+    }
+
+    // Clamp: 30s – 10min
+    const clamped = Math.max(30000, Math.min(600000, Math.floor(idleTimeoutMs)));
+
+    if (apService) {
+      apService.setIdleTimeout(clamped);
+    } else {
+      // Nur persistent speichern wenn AP Service nicht läuft
+      const { setIdleTimeoutMs } = require("../services/system/apSettingsStore");
+      setIdleTimeoutMs(clamped);
+    }
+
+    // Broadcast an alle Clients
+    io.emit("ap:settings", { idleTimeoutMs: clamped });
+
+    res.json({ success: true, idleTimeoutMs: clamped });
+  });
+
   // HTTP Server Start
   httpServer.listen(port, async () => {
     try {
@@ -348,19 +424,17 @@ function createWebServer({ port = 3000 } = {}) {
       
       // Starte Datenquelle
       await source.start();
-      
-      // Initialisiere Access Point Manager (wenn UART aktiv)
-      if (useUART && source instanceof UARTSource) {
+
+      // Starte AP Service NACH UART-Verbindung
+      if (apService) {
         try {
-          const apManager = new APManager(source);
-          await apManager.init();
-          console.log(`📶 Access Point Manager initialized`);
+          await apService.start();
         } catch (apErr) {
-          console.warn(`⚠️ AP Manager initialization failed:`, apErr.message);
-          // Fahre fort auch wenn AP fehlschlägt - ist nicht kritisch
+          console.error(`⚠️ AP Service Fehler (Hotspot nicht gestartet): ${apErr.message}`);
+          console.error(`   WebApp läuft weiter ohne Hotspot.`);
         }
       }
-      
+
       console.log(`🚀 Web server listening on http://localhost:${port}`);
     } catch (err) {
       console.error(
@@ -387,7 +461,7 @@ function createWebServer({ port = 3000 } = {}) {
     }
   });
 
-  return { app, io, httpServer, source };
+  return { app, io, httpServer, source, apService };
 }
 
 module.exports = { createWebServer };
@@ -396,12 +470,17 @@ module.exports = { createWebServer };
  * Graceful Shutdown Handler
  * Wird aufgerufen bei SIGINT (Ctrl+C) oder SIGTERM
  */
-function setupGracefulShutdown(httpServer, source) {
+function setupGracefulShutdown(httpServer, source, apService) {
   const signals = ["SIGINT", "SIGTERM"];
 
   signals.forEach((signal) => {
     process.on(signal, async () => {
       console.log(`\n📛 ${signal} received. Shutting down gracefully...`);
+
+      // Deaktiviere Idle-Shutdown (wir fahren ja manuell herunter)
+      if (apService) {
+        apService.disableIdleShutdown();
+      }
 
       // Schließe HTTP Server
       httpServer.close(async () => {
@@ -414,6 +493,16 @@ function setupGracefulShutdown(httpServer, source) {
             console.log(`✓ Data source stopped`);
           } catch (err) {
             console.error(`⚠️ Error stopping data source:`, err.message);
+          }
+        }
+
+        // Stoppe AP Service
+        if (apService) {
+          try {
+            await apService.stop();
+            console.log(`✓ AP Service stopped`);
+          } catch (err) {
+            console.error(`⚠️ Error stopping AP service:`, err.message);
           }
         }
 
@@ -433,10 +522,10 @@ function setupGracefulShutdown(httpServer, source) {
 // Wenn server.js direkt mit "node src/web/server.js" gestartet wird:
 if (require.main === module) {
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
-  const { httpServer, source } = createWebServer({ port });
+  const { httpServer, source, apService } = createWebServer({ port });
 
   // Richte Graceful Shutdown ein
-  setupGracefulShutdown(httpServer, source);
+  setupGracefulShutdown(httpServer, source, apService);
 }
 
 function getOrCreateSessionId(req, res) {

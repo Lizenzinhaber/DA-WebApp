@@ -183,6 +183,46 @@ class UARTClient extends EventEmitter {
   }
 
   /**
+   * Sende Password Data (0x41) zum ESP32
+   * Payload: [length:1B][password:16B] = 17 Bytes
+   * @param {string} password - 16-stelliges alphanumerisches Passwort
+   * @returns {Promise<boolean>}
+   */
+  async sendPasswordData(password) {
+    if (!password || password.length !== 16) {
+      this.log(`❌ Invalid password length: ${password ? password.length : 0} (need 16)`);
+      return false;
+    }
+    // Payload: [0x10 (length=16)] + [16 Bytes password]
+    const payload = Buffer.allocUnsafe(17);
+    payload[0] = 0x10;  // Length prefix = 16
+    payload.write(password, 1, 16, 'ascii');
+    return this.sendMessage(MSG_TYPE.PASSWORD_DATA, payload);
+  }
+
+  /**
+   * Sende AP Status (0x43) zum ESP32
+   * Payload: [clientCount:1B][remainingSec:2B BE][flags:1B] = 4 Bytes
+   * 
+   * Flags:
+   *   0x01 = AP aktiv
+   *   0x02 = Idle-Shutdown Timer bewaffnet
+   *   0x04 = Shutdown steht unmittelbar bevor
+   * 
+   * @param {number} clientCount - Anzahl verbundener WLAN-Clients (0-255)
+   * @param {number} remainingSec - Verbleibende Sekunden bis Shutdown (0 = nicht aktiv)
+   * @param {number} flags - Bit-Flags
+   * @returns {Promise<boolean>}
+   */
+  async sendAPStatus(clientCount, remainingSec, flags) {
+    const payload = Buffer.alloc(4);
+    payload[0] = clientCount & 0xFF;
+    payload.writeUInt16BE(remainingSec & 0xFFFF, 1);
+    payload[3] = flags & 0xFF;
+    return this.sendMessage(MSG_TYPE.AP_STATUS, payload);
+  }
+
+  /**
    * Behandle empfangene Frame
    * @private
    */
@@ -232,6 +272,19 @@ class UARTClient extends EventEmitter {
         case MSG_TYPE.CONFIG_RESP: {
           this.log(`✓ Config Response received`);
           this.emit("config_resp", { payload: frame.payload });
+          break;
+        }
+
+        case MSG_TYPE.PASSWORD_REQ: {
+          this.log(`📥 Password Request (0x40) from ESP32`);
+          this.emit("password_req");
+          break;
+        }
+
+        case MSG_TYPE.PASSWORD_ACK: {
+          const status = frame.payload.length > 0 ? frame.payload[0] : 0;
+          this.log(`✓ Password ACK (0x42) from ESP32 – Status: ${status === 1 ? 'SUCCESS' : 'FAIL'}`);
+          this.emit("password_ack", { status });
           break;
         }
 
