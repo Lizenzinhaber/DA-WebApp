@@ -52,12 +52,10 @@ function sanitizeString(input, maxLen = MAX_STRING_LENGTH) {
  * @returns {{ preset: Object|null, error: string|null }}
  */
 function validateImportPreset(raw, index) {
-  // Typ-Check: muss ein einfaches Objekt sein (kein Array, kein null)
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return { preset: null, error: `[${index}] Kein gültiges Objekt` };
   }
 
-  // Prototype-Pollution Schutz (hasOwnProperty statt 'in', da 'in' die Prototyp-Kette prüft)
   const has = Object.prototype.hasOwnProperty;
   if (has.call(raw, "__proto__") || has.call(raw, "constructor") || has.call(raw, "prototype")) {
     return { preset: null, error: `[${index}] Ungültige Felder (Prototype-Pollution Versuch)` };
@@ -67,12 +65,6 @@ function validateImportPreset(raw, index) {
   const name = sanitizeString(raw.name);
   if (!name) {
     return { preset: null, error: `[${index}] Fehlender oder ungültiger Name` };
-  }
-
-  // Filter-Typ
-  const filterType = sanitizeString(raw.filter_type || raw.filterType);
-  if (!filterType || !["ma", "lpf"].includes(filterType)) {
-    return { preset: null, error: `[${index}] "${name}": Ungültiger filter_type (muss "ma" oder "lpf" sein)` };
   }
 
   // Noise Gate
@@ -87,15 +79,30 @@ function validateImportPreset(raw, index) {
     return { preset: null, error: `[${index}] "${name}": fsr_max ungültig (1-4095)` };
   }
 
+  // MA Window (optional, Default 6)
+  const maWindowRaw = raw.ma_window ?? raw.maWindow;
+  const maWindow = maWindowRaw !== undefined ? Number(maWindowRaw) : 6;
+  if (!Number.isFinite(maWindow) || maWindow < 0 || maWindow > 20) {
+    return { preset: null, error: `[${index}] "${name}": ma_window ungültig (0-20)` };
+  }
+
+  // LPF Alpha (optional, Default 0.90)
+  const lpfAlphaRaw = raw.lpf_alpha ?? raw.lpfAlpha;
+  const lpfAlpha = lpfAlphaRaw !== undefined ? Number(lpfAlphaRaw) : 0.90;
+  if (!Number.isFinite(lpfAlpha) || lpfAlpha < 0 || lpfAlpha > 1) {
+    return { preset: null, error: `[${index}] "${name}": lpf_alpha ungültig (0-1)` };
+  }
+
   // Creator (optional, Default)
   const createdBy = sanitizeString(raw.created_by || raw.createdBy) || "Import";
 
   return {
     preset: {
       name,
-      filterType,
       noiseGate: Math.floor(noiseGate),
       fsrMax: Math.floor(fsrMax),
+      maWindow: Math.floor(maWindow),
+      lpfAlpha: Math.round(lpfAlpha * 100) / 100,
       createdBy
     },
     error: null
@@ -161,13 +168,14 @@ router.get("/filter-presets/export", async (req, res) => {
     const presets = await listFilterPresets();
 
     const exportData = {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       presets: presets.map(p => ({
         name: p.name,
-        filter_type: p.filter_type,
         noise_gate: p.noise_gate,
         fsr_max: p.fsr_max,
+        ma_window: p.ma_window,
+        lpf_alpha: Number(p.lpf_alpha),
         created_by: p.created_by
       }))
     };
@@ -225,9 +233,10 @@ router.post("/filter-presets/import", async (req, res) => {
       try {
         const created = await createFilterPreset(
           preset.name,
-          preset.filterType,
           preset.noiseGate,
           preset.fsrMax,
+          preset.maWindow,
+          preset.lpfAlpha,
           preset.createdBy
         );
 
@@ -268,13 +277,13 @@ router.get("/filter-presets/:id", async (req, res) => {
 });
 
 router.post("/filter-presets", async (req, res) => {
-  const { name, filterType, noiseGate, fsrMax, createdBy } = req.body;
+  const { name, noiseGate, fsrMax, maWindow, lpfAlpha, createdBy } = req.body;
   
   if (!name) {
     return res.status(400).json({ error: "name required" });
   }
   
-  const preset = await createFilterPreset(name, filterType, noiseGate, fsrMax, createdBy);
+  const preset = await createFilterPreset(name, noiseGate, fsrMax, maWindow, lpfAlpha, createdBy);
   if (!preset) {
     return res.status(400).json({ error: "Failed to create preset" });
   }
@@ -283,13 +292,13 @@ router.post("/filter-presets", async (req, res) => {
 });
 
 router.put("/filter-presets/:id", async (req, res) => {
-  const { name, filterType, noiseGate, fsrMax } = req.body;
+  const { name, noiseGate, fsrMax, maWindow, lpfAlpha } = req.body;
   
   if (!name) {
     return res.status(400).json({ error: "name required" });
   }
   
-  const ok = await updateFilterPreset(Number(req.params.id), name, filterType, noiseGate, fsrMax);
+  const ok = await updateFilterPreset(Number(req.params.id), name, noiseGate, fsrMax, maWindow, lpfAlpha);
   if (!ok) {
     return res.status(400).json({ error: "Failed to update preset" });
   }

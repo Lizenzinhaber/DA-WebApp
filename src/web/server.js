@@ -166,41 +166,32 @@ function createWebServer({ port = 3000 } = {}) {
   if (source && typeof source.on === 'function') {
     source.on('config', (payload) => {
       try {
-        // payload is a Buffer
-        // Parse flexibly: support minimal FSR-only (5 bytes) or extended format
         const buf = payload;
         const parsed = {};
         if (!buf || buf.length === 0) {
           return;
         }
 
-        // If buffer length >= 5 we expect at least version + some data
-        // Our preferred extended format (recommended):
-        // [ver:1][filterType:1][noiseGate:2 BE][fsrMax:2 BE][hidPollMs:2 BE][hidMaxDelta:1]
-        // minimal legacy format (as present today) may be 5 bytes and only report firmware/caps
-
         parsed.raw = Array.from(buf);
 
-        if (buf.length >= 5) {
-          // Try to extract FSR params if present (positions based on extended layout)
-          // Search for plausible uint16 values in buffer (best-effort)
-          if (buf.length >= 6) {
-            // If extended format: assume filterType at index 1, noiseGate at 2..3, fsrMax at 4..5
-            parsed.filterType = buf[1];
-            if (buf.length >= 6) {
-              parsed.noiseGate = buf.readUInt16BE ? buf.readUInt16BE(2) : (buf[2]<<8|buf[3]);
-            }
-            if (buf.length >= 8) {
-              parsed.fsrMax = buf.readUInt16BE ? buf.readUInt16BE(4) : (buf[4]<<8|buf[5]);
-            }
-          }
-          if (buf.length >= 11) {
-            parsed.hidPollMs = buf.readUInt16BE(6);
+        // Extended format: [ver:1][subver:1][noiseGate:2B][fsrMax:2B][maWindow:1][lpfAlpha:1][pollMs:2B][maxDelta:1]
+        if (buf.length >= 11) {
+          parsed.noiseGate   = buf.readUInt16BE(2);
+          parsed.fsrMax      = buf.readUInt16BE(4);
+          parsed.maWindow    = buf[6];
+          parsed.lpfAlpha    = (buf[7] / 100.0);
+          parsed.hidPollMs   = buf.readUInt16BE(8);
+          parsed.hidMaxDelta = buf[10];
+        } else if (buf.length >= 6) {
+          // Legacy 9-byte format fallback
+          parsed.noiseGate = buf.readUInt16BE(2);
+          parsed.fsrMax    = buf.readUInt16BE(4);
+          if (buf.length >= 9) {
+            parsed.hidPollMs   = buf.readUInt16BE(6);
             parsed.hidMaxDelta = buf[8];
           }
         }
 
-        // Veröffentliche an Web-Clients
         io.emit('system:config', parsed);
       } catch (err) {
         console.error('Error parsing config payload:', err.message);
@@ -270,7 +261,7 @@ function createWebServer({ port = 3000 } = {}) {
     // Client sendet Filter-Einstellungen an Server -> weiterleiten an ESP32
     socket.on("filter:set", async (settings, callback) => {
       try {
-        // Erwartetes Format: { filter: 'ma'|'lpf', noiseGate: 0-4095, fsrMax: 0-4095 }
+        // Erwartetes Format: { noiseGate: 0-4095, fsrMax: 0-4095, maWindow: 0-20, lpfAlpha: 0-1 }
         if (!settings || typeof settings !== "object") {
           const msg = "Invalid settings payload";
           if (callback) callback({ success: false, message: msg });
@@ -278,19 +269,20 @@ function createWebServer({ port = 3000 } = {}) {
           return;
         }
 
-        const filterType = settings.filter === "lpf" ? 2 : 1; // 1=MA, 2=LPF
-        const noiseGate = Math.max(0, Math.min(4095, Number(settings.noiseGate) || 0));
-        const fsrMax = Math.max(0, Math.min(4095, Number(settings.fsrMax) || 0));
+        const noiseGate  = Math.max(0, Math.min(4095, Number(settings.noiseGate) || 0));
+        const fsrMax     = Math.max(0, Math.min(4095, Number(settings.fsrMax) || 0));
+        const maWindow   = Math.max(0, Math.min(20, Math.floor(Number(settings.maWindow) || 0)));
+        const lpfAlpha   = Math.max(0, Math.min(100, Math.round((Number(settings.lpfAlpha) || 0) * 100)));
 
-        // Payload Layout (cmdData): [filterType:1B][noiseGate:2B BE][fsrMax:2B BE]
-        const cmdData = Buffer.allocUnsafe(5);
-        cmdData[0] = filterType;
-        cmdData.writeUInt16BE(noiseGate, 1);
-        cmdData.writeUInt16BE(fsrMax, 3);
+        // Payload: [noiseGate:2B BE][fsrMax:2B BE][maWindow:1B][lpfAlphaPercent:1B]
+        const cmdData = Buffer.allocUnsafe(6);
+        cmdData.writeUInt16BE(noiseGate, 0);
+        cmdData.writeUInt16BE(fsrMax, 2);
+        cmdData[4] = maWindow;
+        cmdData[5] = lpfAlpha;
 
-        const CMD_FILTER_CONFIG = 0x20; // Command ID for filter config (ESP32 mapping)
+        const CMD_FILTER_CONFIG = 0x20;
 
-        // If source supports sendCommand, forward to ESP32 (UARTSource)
         let sendOk = false;
         if (source && typeof source.sendCommand === "function") {
           sendOk = await source.sendCommand(CMD_FILTER_CONFIG, cmdData);

@@ -4,705 +4,293 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sensor Dashboard</title>
-    <style>
-        /* ============================================================
-         *  Design System — Medical / Clinical
-         * ============================================================ */
-        :root {
-            --c-primary:      #1e3a5f;
-            --c-primary-h:    #2c5282;
-            --c-accent:       #3182ce;
-            --c-accent-light: #ebf5ff;
-            --c-success:      #38a169;
-            --c-success-bg:   #f0fff4;
-            --c-error:        #e53e3e;
-            --c-error-bg:     #fff5f5;
-            --c-warning:      #dd6b20;
-            --c-bg:           #f7fafc;
-            --c-surface:      #ffffff;
-            --c-border:       #e2e8f0;
-            --c-border-lt:    #edf2f7;
-            --c-text:         #1a202c;
-            --c-text-sec:     #718096;
-            --c-text-muted:   #a0aec0;
-            --radius:    8px;
-            --radius-sm: 6px;
-            --shadow:    0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,.06), 0 2px 4px -1px rgba(0,0,0,.04);
-            --font:      -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
-            --font-mono: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
-            --ease:      .15s ease;
-        }
-
-        /* === Reset === */
-        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-
-        body {
-            font-family: var(--font);
-            background: var(--c-bg);
-            color: var(--c-text);
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-            -webkit-text-size-adjust: 100%;
-        }
-
-        /* === Layout === */
-        .container { max-width:1200px; margin:0 auto; padding:16px; }
-
-        /* === Header === */
-        .header {
-            background: var(--c-primary);
-            color: #fff;
-            padding: 14px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: var(--shadow-md);
-        }
-        .header-title { font-size:17px; font-weight:700; letter-spacing:-.3px; }
-
-        /* === Status Badge (header) === */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 5px 14px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 12px;
-            letter-spacing: .3px;
-            text-transform: uppercase;
-        }
-        .status-badge::before {
-            content:'';
-            width:8px; height:8px;
-            border-radius:50%;
-            flex-shrink:0;
-        }
-        .status-badge.connected {
-            background: rgba(56,161,105,.15);
-            color: #9ae6b4;
-        }
-        .status-badge.connected::before {
-            background:#68d391;
-            box-shadow:0 0 6px rgba(104,211,145,.6);
-        }
-        .status-badge.disconnected {
-            background: rgba(229,62,62,.15);
-            color: #feb2b2;
-        }
-        .status-badge.disconnected::before {
-            background:#fc8181;
-            box-shadow:0 0 6px rgba(252,129,129,.6);
-        }
-
-        /* === Error Box === */
-        .error-box {
-            background: var(--c-error-bg);
-            border-left: 3px solid var(--c-error);
-            padding: 12px 16px;
-            border-radius: var(--radius-sm);
-            color: var(--c-error);
-            margin-bottom: 16px;
-            display: none;
-            font-size: 13px;
-            font-weight: 500;
-        }
-        .error-box.show {
-            display: block;
-            animation: fadeIn .2s ease;
-        }
-        @keyframes fadeIn {
-            from { opacity:0; transform:translateY(-4px); }
-            to   { opacity:1; transform:translateY(0); }
-        }
-
-        /* === Dashboard Grid === */
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-        }
-
-        /* === Card === */
-        .card {
-            background: var(--c-surface);
-            border: 1px solid var(--c-border);
-            border-radius: var(--radius);
-            padding: 20px;
-            box-shadow: var(--shadow);
-        }
-        .card-header {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--c-text-sec);
-            text-transform: uppercase;
-            letter-spacing: .8px;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--c-border-lt);
-        }
-
-        /* === Buttons === */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 10px 18px;
-            min-height: 44px;
-            border: none;
-            border-radius: var(--radius-sm);
-            font-family: var(--font);
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background var(--ease), transform var(--ease);
-            white-space: nowrap;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .btn:active { transform:scale(.97); }
-        .btn-primary   { background:var(--c-accent); color:#fff; }
-        .btn-primary:hover { background:var(--c-primary-h); }
-        .btn-success   { background:var(--c-success); color:#fff; }
-        .btn-success:hover { background:#2f855a; }
-        .btn-danger    { background:var(--c-error); color:#fff; }
-        .btn-danger:hover  { background:#c53030; }
-        .btn-secondary { background:var(--c-primary); color:#fff; }
-        .btn-secondary:hover { background:var(--c-primary-h); }
-        .btn-ghost     { background:transparent; color:var(--c-text-sec); border:1px solid var(--c-border); }
-        .btn-ghost:hover   { background:var(--c-bg); }
-        .btn-sm { padding:6px 14px; font-size:12px; min-height:36px; }
-
-        /* === Form Elements === */
-        .form-label {
-            display:block;
-            font-size:12px;
-            font-weight:600;
-            color:var(--c-text-sec);
-            text-transform:uppercase;
-            letter-spacing:.5px;
-            margin-bottom:6px;
-        }
-        .form-input, .form-select {
-            width:100%;
-            padding:10px 12px;
-            border:1px solid var(--c-border);
-            border-radius:var(--radius-sm);
-            font-family:var(--font);
-            font-size:14px;
-            color:var(--c-text);
-            background:var(--c-surface);
-            transition:border-color var(--ease), box-shadow var(--ease);
-            -webkit-appearance:none;
-            appearance:none;
-        }
-        .form-input:focus, .form-select:focus {
-            outline:none;
-            border-color:var(--c-accent);
-            box-shadow:0 0 0 3px rgba(49,130,206,.15);
-        }
-        .form-hint {
-            font-size:12px; color:var(--c-text-muted);
-            margin-top:4px; line-height:1.4;
-        }
-        .form-row   { display:flex; gap:12px; align-items:flex-start; }
-        .form-group { flex:1; min-width:0; }
-        .form-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-        .status-text  { font-size:13px; font-weight:600; color:var(--c-text-sec); }
-
-        /* === Sensor Data === */
-        .sensor-grid {
-            display:grid;
-            grid-template-columns:1fr;
-            gap:12px;
-        }
-        .sensor-group {
-            background:var(--c-bg);
-            padding:14px;
-            border-radius:var(--radius-sm);
-            border-top:3px solid var(--c-accent);
-        }
-        .sensor-group-label {
-            font-size:11px; font-weight:700;
-            color:var(--c-text-sec);
-            text-transform:uppercase; letter-spacing:.5px;
-            margin-bottom:10px;
-        }
-        .sensor-cells {
-            display:grid;
-            grid-template-columns:repeat(4, 1fr);
-            gap:6px;
-        }
-        .sensor-cell {
-            background:var(--c-surface);
-            padding:8px 4px;
-            border-radius:4px;
-            text-align:center;
-            border-top:2px solid var(--c-border);
-        }
-        .sensor-cell.top   { border-top-color:#e53e3e; }
-        .sensor-cell.left  { border-top-color:#dd6b20; }
-        .sensor-cell.down  { border-top-color:#38a169; }
-        .sensor-cell.right { border-top-color:#3182ce; }
-        .sensor-cell-label {
-            font-size:10px; color:var(--c-text-muted);
-            font-weight:700; text-transform:uppercase;
-            letter-spacing:.3px; margin-bottom:4px;
-        }
-        .sensor-cell-value {
-            font-family:var(--font-mono);
-            font-size:13px; font-weight:700;
-            color:var(--c-text);
-        }
-
-        /* === Comparison Table === */
-        .table-wrap {
-            overflow-x:auto;
-            margin-top:16px;
-            -webkit-overflow-scrolling:touch;
-        }
-        .comparison-table {
-            width:100%; border-collapse:collapse;
-            font-size:13px; min-width:340px;
-        }
-        .comparison-table th {
-            background:var(--c-primary); color:#fff;
-            padding:10px 12px; text-align:left;
-            font-weight:600; font-size:11px;
-            text-transform:uppercase; letter-spacing:.3px;
-        }
-        .comparison-table td {
-            padding:10px 12px;
-            border-bottom:1px solid var(--c-border-lt);
-            font-family:var(--font-mono); font-size:13px;
-        }
-        .comparison-table tr:hover td { background:var(--c-bg); }
-        .value-raw        { color:#e53e3e; }
-        .value-filtered   { color:#3182ce; }
-        .value-normalized { color:#38a169; }
-
-        /* === Joystick === */
-        .joystick-container {
-            display:flex; flex-direction:column;
-            align-items:center; gap:20px;
-        }
-        .joystick-field { position:relative; padding:24px; }
-
-        .axis-label {
-            position:absolute;
-            font-family:var(--font-mono);
-            font-size:11px; font-weight:700;
-            color:var(--c-text-muted);
-            user-select:none;
-        }
-        .axis-label.top    { top:2px;    left:50%; transform:translateX(-50%); }
-        .axis-label.bottom { bottom:2px; left:50%; transform:translateX(-50%); }
-        .axis-label.left   { left:2px;   top:50%;  transform:translateY(-50%); }
-        .axis-label.right  { right:2px;  top:50%;  transform:translateY(-50%); }
-
-        .joystick-canvas {
-            width:240px; height:240px;
-            background:var(--c-bg);
-            border:2px solid var(--c-border);
-            border-radius:50%;
-            position:relative;
-            overflow:hidden;
-        }
-        /* Crosshair */
-        .joystick-canvas::before,
-        .joystick-canvas::after {
-            content:''; position:absolute;
-            background:var(--c-border); z-index:1;
-        }
-        .joystick-canvas::before { top:50%; left:8%; right:8%; height:1px; }
-        .joystick-canvas::after  { left:50%; top:8%; bottom:8%; width:1px; }
-
-        .joystick-circle.inner {
-            position:absolute;
-            width:60%; height:60%;
-            border:1px dashed var(--c-border);
-            border-radius:50%;
-            top:50%; left:50%;
-            transform:translate(-50%,-50%);
-            z-index:1;
-        }
-        .joystick-cursor {
-            position:absolute;
-            width:16px; height:16px;
-            background:var(--c-accent);
-            border:2px solid #fff;
-            border-radius:50%;
-            top:50%; left:50%;
-            box-shadow:0 2px 8px rgba(49,130,206,.4);
-            transition:transform .05s linear;
-            z-index:10;
-        }
-
-        .joystick-values {
-            display:grid;
-            grid-template-columns:repeat(2,1fr);
-            gap:8px; width:100%;
-        }
-        .joystick-val {
-            background:var(--c-bg); padding:10px 12px;
-            border-radius:var(--radius-sm);
-            border-left:3px solid var(--c-accent);
-        }
-        .joystick-val-label {
-            font-size:10px; color:var(--c-text-muted);
-            text-transform:uppercase; letter-spacing:.5px;
-            font-weight:700; margin-bottom:2px;
-        }
-        .joystick-val-number {
-            font-family:var(--font-mono);
-            font-size:18px; font-weight:700;
-            color:var(--c-text);
-        }
-
-        /* === Preset Selector === */
-        .preset-bar { display:flex; gap:8px; align-items:stretch; }
-        .preset-bar .form-select { flex:1; }
-
-        .toggle-panel {
-            padding:12px; background:var(--c-bg);
-            border-radius:var(--radius-sm);
-            text-align:center; font-weight:600; font-size:13px;
-            color:var(--c-accent); cursor:pointer;
-            transition:background var(--ease);
-            user-select:none;
-            border:1px dashed var(--c-border);
-        }
-        .toggle-panel:hover { background:var(--c-accent-light); }
-
-        .preset-form {
-            background:var(--c-bg); padding:16px;
-            border-radius:var(--radius-sm);
-            border:1px solid var(--c-border);
-        }
-        .preset-list {
-            max-height:200px; overflow-y:auto;
-            border:1px solid var(--c-border);
-            border-radius:var(--radius-sm);
-        }
-        .preset-item {
-            padding:12px; border-bottom:1px solid var(--c-border-lt);
-            font-size:13px; cursor:pointer;
-            transition:background var(--ease);
-        }
-        .preset-item:hover { background:var(--c-bg); }
-        .preset-item:last-child { border-bottom:none; }
-        .preset-item-name { font-weight:600; color:var(--c-text); }
-        .preset-item-meta { color:var(--c-text-muted); font-size:12px; margin-top:2px; }
-
-        /* Export / Import */
-        .export-bar {
-            display:flex; gap:8px; flex-wrap:wrap;
-            padding-top:12px;
-            border-top:1px solid var(--c-border-lt);
-        }
-        .import-zone {
-            padding:24px; border:2px dashed var(--c-border);
-            border-radius:var(--radius-sm);
-            text-align:center; cursor:pointer;
-            background:var(--c-bg);
-            transition:border-color var(--ease), background var(--ease);
-        }
-        .import-zone:hover,
-        .import-zone.drag-over {
-            border-color:var(--c-accent);
-            background:var(--c-accent-light);
-        }
-        .import-zone-title { font-weight:600; color:var(--c-text-sec); font-size:13px; }
-        .import-zone-sub   { font-size:12px; color:var(--c-text-muted); margin-top:4px; }
-        .import-status {
-            display:none; margin-top:8px;
-            padding:10px 14px; border-radius:var(--radius-sm);
-            font-size:13px; font-weight:500;
-        }
-
-        /* === AP Quick Buttons === */
-        .quick-btns { display:flex; gap:6px; flex-wrap:wrap; }
-        .quick-btn {
-            padding:6px 14px;
-            border-radius:var(--radius-sm);
-            border:1px solid var(--c-border);
-            background:var(--c-bg); color:var(--c-text);
-            font-weight:600; font-size:12px;
-            cursor:pointer; transition:all var(--ease);
-            font-family:var(--font);
-            min-height:36px;
-        }
-        .quick-btn:hover { background:var(--c-accent-light); border-color:var(--c-accent); }
-        .quick-btn.active { background:var(--c-accent); color:#fff; border-color:var(--c-accent); }
-
-        /* ============================================================
-         *  Responsive — Mobile-first, then expand
-         * ============================================================ */
-        @media (max-width:767px) {
-            .form-row { flex-direction:column; }
-            .preset-bar { flex-wrap:wrap; }
-            .preset-bar .form-select { width:100%; }
-            .joystick-canvas { width:220px; height:220px; }
-        }
-
-        @media (min-width:768px) {
-            .container { padding:24px; }
-            .dashboard {
-                grid-template-columns:repeat(2,1fr);
-            }
-            .card-full { grid-column:1/-1; }
-            .sensor-grid { grid-template-columns:repeat(3,1fr); }
-            .joystick-canvas { width:280px; height:280px; }
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <!-- ==================== Header ==================== -->
-    <header class="header">
-        <div class="header-title">Sensor Dashboard</div>
-        <div class="status-badge disconnected" id="statusBadge">Getrennt</div>
-    </header>
+    <nav class="navbar app-header px-3">
+        <span class="navbar-brand mb-0">Sensor Dashboard</span>
+        <span class="status-badge disconnected" id="statusBadge">Getrennt</span>
+    </nav>
 
-    <div class="container">
+    <div class="container py-3">
         <!-- Error Display -->
-        <div id="errorBox" class="error-box">
+        <div id="errorBox" class="error-box rounded p-3 mb-3">
             <strong>Fehler:</strong> <span id="errorMessage"></span>
         </div>
 
-        <div class="dashboard">
-            <!-- ==================== Joystick ==================== -->
-            <div class="card">
-                <div class="card-header">Joystick-Vektor</div>
-                <div class="joystick-container">
-                    <div class="joystick-field">
-                        <span class="axis-label top">+Y</span>
-                        <span class="axis-label bottom">&minus;Y</span>
-                        <span class="axis-label left">&minus;X</span>
-                        <span class="axis-label right">+X</span>
-                        <div class="joystick-canvas">
-                            <div class="joystick-circle inner"></div>
-                            <div class="joystick-cursor" id="joystickCursor"></div>
-                        </div>
-                    </div>
-                    <div class="joystick-values">
-                        <div class="joystick-val">
-                            <div class="joystick-val-label">X-Achse</div>
-                            <div class="joystick-val-number" id="joystick-x">0.00</div>
-                        </div>
-                        <div class="joystick-val">
-                            <div class="joystick-val-label">Y-Achse</div>
-                            <div class="joystick-val-number" id="joystick-y">0.00</div>
-                        </div>
-                        <div class="joystick-val">
-                            <div class="joystick-val-label">Magnitude</div>
-                            <div class="joystick-val-number" id="joystick-mag">0.000</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="row g-3">
+            <!-- ==================== Linke Spalte ==================== -->
+            <div class="col-12 col-md-6 d-flex flex-column gap-3">
 
-            <!-- ==================== Sensor Data (full width) ==================== -->
-            <div class="card card-full">
-                <div class="card-header">Sensor-Daten</div>
-                <div class="sensor-grid">
-                    <!-- Raw -->
-                    <div class="sensor-group">
-                        <div class="sensor-group-label">Ungefiltert (0 &ndash; 4095)</div>
-                        <div class="sensor-cells">
-                            <div class="sensor-cell top"><div class="sensor-cell-label">U</div><div class="sensor-cell-value" id="raw-u">0</div></div>
-                            <div class="sensor-cell left"><div class="sensor-cell-label">L</div><div class="sensor-cell-value" id="raw-l">0</div></div>
-                            <div class="sensor-cell down"><div class="sensor-cell-label">D</div><div class="sensor-cell-value" id="raw-d">0</div></div>
-                            <div class="sensor-cell right"><div class="sensor-cell-label">R</div><div class="sensor-cell-value" id="raw-r">0</div></div>
-                        </div>
-                    </div>
-                    <!-- Filtered -->
-                    <div class="sensor-group">
-                        <div class="sensor-group-label">Gefiltert (0 &ndash; 4095)</div>
-                        <div class="sensor-cells">
-                            <div class="sensor-cell top"><div class="sensor-cell-label">U</div><div class="sensor-cell-value" id="filtered-u">0</div></div>
-                            <div class="sensor-cell left"><div class="sensor-cell-label">L</div><div class="sensor-cell-value" id="filtered-l">0</div></div>
-                            <div class="sensor-cell down"><div class="sensor-cell-label">D</div><div class="sensor-cell-value" id="filtered-d">0</div></div>
-                            <div class="sensor-cell right"><div class="sensor-cell-label">R</div><div class="sensor-cell-value" id="filtered-r">0</div></div>
-                        </div>
-                    </div>
-                    <!-- Normalized -->
-                    <div class="sensor-group">
-                        <div class="sensor-group-label">Normalisiert (0 &ndash; 1)</div>
-                        <div class="sensor-cells">
-                            <div class="sensor-cell top"><div class="sensor-cell-label">U</div><div class="sensor-cell-value" id="norm-u">0.000</div></div>
-                            <div class="sensor-cell left"><div class="sensor-cell-label">L</div><div class="sensor-cell-value" id="norm-l">0.000</div></div>
-                            <div class="sensor-cell down"><div class="sensor-cell-label">D</div><div class="sensor-cell-value" id="norm-d">0.000</div></div>
-                            <div class="sensor-cell right"><div class="sensor-cell-label">R</div><div class="sensor-cell-value" id="norm-r">0.000</div></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Comparison Table -->
-                <div class="table-wrap">
-                    <table class="comparison-table">
-                        <thead>
-                            <tr>
-                                <th>Sensor</th>
-                                <th>Ungefiltert</th>
-                                <th>Gefiltert</th>
-                                <th>Normalisiert</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td><strong>Up</strong></td>    <td class="value-raw" id="table-raw-u">0</td><td class="value-filtered" id="table-filt-u">0</td><td class="value-normalized" id="table-norm-u">0.000</td></tr>
-                            <tr><td><strong>Left</strong></td>  <td class="value-raw" id="table-raw-l">0</td><td class="value-filtered" id="table-filt-l">0</td><td class="value-normalized" id="table-norm-l">0.000</td></tr>
-                            <tr><td><strong>Down</strong></td>  <td class="value-raw" id="table-raw-d">0</td><td class="value-filtered" id="table-filt-d">0</td><td class="value-normalized" id="table-norm-d">0.000</td></tr>
-                            <tr><td><strong>Right</strong></td> <td class="value-raw" id="table-raw-r">0</td><td class="value-filtered" id="table-filt-r">0</td><td class="value-normalized" id="table-norm-r">0.000</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- ==================== Filter Settings ==================== -->
-            <div class="card">
-                <div class="card-header">Filter-Einstellungen</div>
-                <div style="display:flex;flex-direction:column;gap:14px;">
-                    <div class="form-group">
-                        <label class="form-label" for="filterType">Filter-Typ</label>
-                        <select id="filterType" class="form-select">
-                            <option value="ma">Gleitend Mitteln (MA)</option>
-                            <option value="lpf">Exponentielles Gleitend Mitteln (LPF)</option>
-                        </select>
-                        <div id="filterDesc" class="form-hint" style="margin-top:8px;">
-                            Gleitend Mitteln (MA): Robust gegen Ausreisser, gute Rauschunterdrueckung bei moderater Verzoegerung.
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label" for="noiseGate">Noise Gate (0 &ndash; 4095)</label>
-                            <input id="noiseGate" type="number" min="0" max="4095" value="500" class="form-input" />
-                            <div class="form-hint">Schwellwert: Unter diesem Wert gilt der Sensor als nicht gedrueckt. 0-500 = sehr empfindlich, 500-1000 = normal, &gt;1000 = weniger empfindlich.</div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="fsrMax">FSR Max (0 &ndash; 4095)</label>
-                            <input id="fsrMax" type="number" min="0" max="4095" value="4000" class="form-input" />
-                            <div class="form-hint">ADC-Wert, der 100% entspricht. Standard: 4000. Hoeher setzen wenn sehr hohe Druecke noetig sind.</div>
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button id="btnSendFilter" class="btn btn-primary">Senden</button>
-                        <span id="filterStatus" class="status-text">Nicht gesendet</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ==================== Filter Presets ==================== -->
-            <div class="card">
-                <div class="card-header">Voreinstellungen</div>
-                <div style="display:flex;flex-direction:column;gap:12px;">
-                    <div class="preset-bar">
-                        <select id="presetSelect" class="form-select">
-                            <option value="">-- Keine Voreinstellung --</option>
-                        </select>
-                        <button id="btnLoadPreset" class="btn btn-primary btn-sm">Laden</button>
-                        <button id="btnDeletePreset" class="btn btn-danger btn-sm">Entfernen</button>
-                    </div>
-
-                    <div id="presetCreateToggle" class="toggle-panel">+ Neue Voreinstellung erstellen</div>
-
-                    <div id="presetCreateForm" class="preset-form" style="display:none;">
-                        <div class="form-row" style="margin-bottom:12px;">
-                            <div class="form-group">
-                                <label class="form-label">Name</label>
-                                <input id="presetName" type="text" class="form-input" placeholder="z.B. Empfindlich, Normal, Robust" />
+                <!-- Joystick -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-header-label">Joystick-Vektor</div>
+                        <div class="d-flex flex-column align-items-center gap-3">
+                            <div class="joystick-field">
+                                <span class="axis-label top">+Y</span>
+                                <span class="axis-label bottom">&minus;Y</span>
+                                <span class="axis-label left">&minus;X</span>
+                                <span class="axis-label right">+X</span>
+                                <div class="joystick-canvas">
+                                    <div class="joystick-circle-inner"></div>
+                                    <div class="joystick-cursor" id="joystickCursor"></div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Erstellt von</label>
-                                <input id="presetCreator" type="text" class="form-input" placeholder="Ihr Name" />
+                            <div class="row g-2 w-100">
+                                <div class="col-6">
+                                    <div class="joystick-val rounded p-2 px-3">
+                                        <div class="joystick-val-label">X-Achse</div>
+                                        <div class="joystick-val-number" id="joystick-x">0.00</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="joystick-val rounded p-2 px-3">
+                                        <div class="joystick-val-label">Y-Achse</div>
+                                        <div class="joystick-val-number" id="joystick-y">0.00</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="joystick-val rounded p-2 px-3">
+                                        <div class="joystick-val-label">Magnitude</div>
+                                        <div class="joystick-val-number" id="joystick-mag">0.000</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="form-actions">
-                            <button id="btnCreatePreset" class="btn btn-success btn-sm">Speichern</button>
-                            <button id="btnCancelPreset" class="btn btn-ghost btn-sm">Abbrechen</button>
-                        </div>
-                    </div>
-
-                    <div id="presetList" class="preset-list" style="display:none;"></div>
-
-                    <!-- Export / Import -->
-                    <div class="export-bar">
-                        <button id="btnExportPresets" class="btn btn-secondary btn-sm">Exportieren</button>
-                        <button id="btnImportPresetsToggle" class="btn btn-secondary btn-sm">Importieren</button>
-                    </div>
-
-                    <div id="importArea" style="display:none;">
-                        <div id="importDropZone" class="import-zone">
-                            <div class="import-zone-title">JSON-Datei hierher ziehen</div>
-                            <div class="import-zone-sub">oder antippen zum Auswaehlen</div>
-                            <input id="importFileInput" type="file" accept=".json,application/json" style="display:none;" />
-                        </div>
-                        <div id="importStatus" class="import-status"></div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ==================== HID Mouse ==================== -->
-            <div class="card">
-                <div class="card-header">HID-Maus</div>
-                <div style="display:flex;flex-direction:column;gap:14px;">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label" for="hidPoll">Polling (ms) 5 &ndash; 200</label>
-                            <input id="hidPoll" type="number" min="1" max="60000" value="10" class="form-input" />
+                <!-- Filter Settings -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-header-label">Filter-Einstellungen</div>
+                        <p class="form-hint mb-3">
+                            Beide Filter (Moving Average + Low-Pass) sind gleichzeitig aktiv.
+                            Die Sensordaten durchlaufen zuerst den MA-Filter, dann den LPF.
+                        </p>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label form-label-upper" for="maWindow">MA Window (0 &ndash; 20)</label>
+                                <input id="maWindow" type="number" min="0" max="20" step="1" value="6" class="form-control form-control-sm">
+                                <div class="form-hint mt-1">Fenstergröße des Moving-Average Filters. 0 = deaktiviert.</div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label form-label-upper" for="lpfAlpha">LPF Alpha (0 &ndash; 1)</label>
+                                <input id="lpfAlpha" type="number" min="0" max="1" step="0.01" value="0.90" class="form-control form-control-sm">
+                                <div class="form-hint mt-1">Glättungsfaktor des Tiefpass-Filters. 0 = keine Filterung, 1 = maximale Glättung.</div>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label" for="hidDelta">Max Delta (px) 0 &ndash; 20</label>
-                            <input id="hidDelta" type="number" min="0" max="255" value="10" class="form-input" />
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label form-label-upper" for="noiseGate">Noise Gate (0 &ndash; 4095)</label>
+                                <input id="noiseGate" type="number" min="0" max="4095" value="500" class="form-control form-control-sm">
+                                <div class="form-hint mt-1">Schwellwert: Unter diesem Wert gilt der Sensor als nicht gedrückt.</div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label form-label-upper" for="fsrMax">FSR Max (0 &ndash; 4095)</label>
+                                <input id="fsrMax" type="number" min="0" max="4095" value="4000" class="form-control form-control-sm">
+                                <div class="form-hint mt-1">ADC-Wert, der 100% entspricht.</div>
+                            </div>
                         </div>
-                    </div>
-                    <div id="hidDesc" class="form-hint">Polling steuert wie haeufig die Maus bewegt wird; kleiner = empfindlicher. Max Delta begrenzt die Bewegung pro Poll.</div>
-                    <div class="form-actions">
-                        <button id="btnSendHid" class="btn btn-primary">Senden</button>
-                        <span id="hidStatus" class="status-text">Nicht gesendet</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="btnSendFilter" class="btn btn-primary btn-sm">Senden</button>
+                            <span id="filterStatus" class="status-text">Nicht gesendet</span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ==================== AP Idle-Timer ==================== -->
-            <div class="card">
-                <div class="card-header">AP Idle-Timer</div>
-                <div style="display:flex;flex-direction:column;gap:14px;">
-                    <div class="form-group">
-                        <label class="form-label" for="apTimerInput">Abschalt-Timer (Dauer ohne Client)</label>
-                        <div style="display:flex;gap:8px;margin-top:4px;">
-                            <input id="apTimerInput" type="text" class="form-input" placeholder="z.B. 3m, 180s, 3:00" value="3:00" style="font-family:var(--font-mono);flex:1;" />
-                            <button id="btnSetApTimer" class="btn btn-primary" style="white-space:nowrap;">Speichern</button>
+                <!-- HID Mouse -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-header-label">HID-Maus</div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label form-label-upper" for="hidPoll">Polling (ms) 5 &ndash; 200</label>
+                                <input id="hidPoll" type="number" min="1" max="60000" value="10" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label form-label-upper" for="hidDelta">Max Delta (px) 0 &ndash; 20</label>
+                                <input id="hidDelta" type="number" min="0" max="255" value="10" class="form-control form-control-sm">
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-row">
-                        <div style="flex:1;min-width:0;background:var(--c-bg);padding:12px;border-radius:var(--radius-sm);border-left:3px solid var(--c-accent);">
-                            <div class="form-label" style="margin-bottom:2px;">Aktueller Wert</div>
-                            <div id="apTimerCurrent" style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--c-text);">3:00</div>
+                        <div class="form-hint mb-2">Polling steuert wie häufig die Maus bewegt wird; kleiner = empfindlicher. Max Delta begrenzt die Bewegung pro Poll.</div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="btnSendHid" class="btn btn-primary btn-sm">Senden</button>
+                            <span id="hidStatus" class="status-text">Nicht gesendet</span>
                         </div>
-                        <div style="flex:1;min-width:0;background:var(--c-bg);padding:12px;border-radius:var(--radius-sm);border-left:3px solid var(--c-warning);">
-                            <div class="form-label" style="margin-bottom:2px;">Status</div>
-                            <div id="apTimerStatus" style="font-weight:600;font-size:14px;color:var(--c-text-sec);">Wird geladen...</div>
-                        </div>
-                    </div>
-                    <div class="quick-btns">
-                        <button class="ap-timer-quick quick-btn" data-seconds="60">1 Min</button>
-                        <button class="ap-timer-quick quick-btn" data-seconds="120">2 Min</button>
-                        <button class="ap-timer-quick quick-btn" data-seconds="180">3 Min</button>
-                        <button class="ap-timer-quick quick-btn" data-seconds="300">5 Min</button>
-                        <button class="ap-timer-quick quick-btn" data-seconds="600">10 Min</button>
-                    </div>
-                    <div class="form-hint">
-                        Eingabe in mehreren Formaten: <strong>3m</strong> (Minuten), <strong>180s</strong> (Sekunden),
-                        <strong>3:00</strong> (Min:Sek), oder einfach <strong>180</strong> (Sekunden).
-                        Bereich: 30 Sekunden &ndash; 10 Minuten.
                     </div>
                 </div>
+
             </div>
-        </div><!-- /dashboard -->
+
+            <!-- ==================== Rechte Spalte ==================== -->
+            <div class="col-12 col-md-6 d-flex flex-column gap-3">
+
+                <!-- Sensor Data -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-header-label">Sensor-Daten</div>
+                        <div class="row g-2">
+                            <div class="col-12 col-lg-4">
+                                <div class="sensor-group rounded p-3">
+                                    <div class="sensor-group-label mb-2">Ungefiltert (0 &ndash; 4095)</div>
+                                    <div class="row g-1">
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 top"><div class="sensor-cell-label">O</div><div class="sensor-cell-value" id="raw-u">0</div></div></div>
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 left"><div class="sensor-cell-label">L</div><div class="sensor-cell-value" id="raw-l">0</div></div></div>
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 down"><div class="sensor-cell-label">U</div><div class="sensor-cell-value" id="raw-d">0</div></div></div>
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 right"><div class="sensor-cell-label">R</div><div class="sensor-cell-value" id="raw-r">0</div></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-4">
+                                <div class="sensor-group rounded p-3">
+                                    <div class="sensor-group-label mb-2">Gefiltert (0 &ndash; 4095)</div>
+                                    <div class="row g-1">
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 top"><div class="sensor-cell-label">O</div><div class="sensor-cell-value" id="filtered-u">0</div></div></div>
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 left"><div class="sensor-cell-label">L</div><div class="sensor-cell-value" id="filtered-l">0</div></div></div>
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 down"><div class="sensor-cell-label">U</div><div class="sensor-cell-value" id="filtered-d">0</div></div></div>
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 right"><div class="sensor-cell-label">R</div><div class="sensor-cell-value" id="filtered-r">0</div></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-4">
+                                <div class="sensor-group rounded p-3">
+                                    <div class="sensor-group-label mb-2">Normalisiert (0 &ndash; 1)</div>
+                                    <div class="row g-1">
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 top"><div class="sensor-cell-label">O</div><div class="sensor-cell-value" id="norm-u">0.000</div></div></div>
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 left"><div class="sensor-cell-label">L</div><div class="sensor-cell-value" id="norm-l">0.000</div></div></div>
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 down"><div class="sensor-cell-label">U</div><div class="sensor-cell-value" id="norm-d">0.000</div></div></div>
+                                        <div class="col-3"><div class="sensor-cell rounded p-2 right"><div class="sensor-cell-label">R</div><div class="sensor-cell-value" id="norm-r">0.000</div></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-responsive mt-3">
+                            <table class="table table-hover comparison-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Sensor</th>
+                                        <th>Ungefiltert</th>
+                                        <th>Gefiltert</th>
+                                        <th>Normalisiert</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td><strong>Oben</strong></td>    <td class="value-raw" id="table-raw-u">0</td><td class="value-filtered" id="table-filt-u">0</td><td class="value-normalized" id="table-norm-u">0.000</td></tr>
+                                    <tr><td><strong>Links</strong></td>  <td class="value-raw" id="table-raw-l">0</td><td class="value-filtered" id="table-filt-l">0</td><td class="value-normalized" id="table-norm-l">0.000</td></tr>
+                                    <tr><td><strong>Unten</strong></td>  <td class="value-raw" id="table-raw-d">0</td><td class="value-filtered" id="table-filt-d">0</td><td class="value-normalized" id="table-norm-d">0.000</td></tr>
+                                    <tr><td><strong>Rechts</strong></td> <td class="value-raw" id="table-raw-r">0</td><td class="value-filtered" id="table-filt-r">0</td><td class="value-normalized" id="table-norm-r">0.000</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voreinstellungen -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-header-label">Voreinstellungen</div>
+                        <div class="d-flex flex-column gap-2">
+                            <div class="d-flex gap-2">
+                                <select id="presetSelect" class="form-select form-select-sm flex-grow-1">
+                                    <option value="">-- Keine Voreinstellung --</option>
+                                </select>
+                                <button id="btnLoadPreset" class="btn btn-primary btn-sm">Laden</button>
+                                <button id="btnEditPreset" class="btn btn-warning btn-sm">Bearbeiten</button>
+                                <button id="btnDeletePreset" class="btn btn-danger btn-sm">Entfernen</button>
+                            </div>
+                            <div id="presetCreateToggle" class="toggle-panel rounded p-2">+ Neue Voreinstellung erstellen</div>
+                            <div id="presetCreateForm" class="bg-light rounded border p-3" style="display:none;">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label form-label-upper">Name</label>
+                                        <input id="presetName" type="text" class="form-control form-control-sm" placeholder="z.B. Empfindlich, Normal, Robust">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label form-label-upper">Erstellt von</label>
+                                        <input id="presetCreator" type="text" class="form-control form-control-sm" placeholder="Ihr Name">
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button id="btnCreatePreset" class="btn btn-success btn-sm">Speichern</button>
+                                    <button id="btnCancelPreset" class="btn btn-outline-secondary btn-sm">Abbrechen</button>
+                                </div>
+                            </div>
+                            <div id="presetEditForm" class="bg-light rounded border p-3" style="display:none;">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-12">
+                                        <label class="form-label form-label-upper">Name</label>
+                                        <input id="presetEditName" type="text" class="form-control form-control-sm">
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button id="btnSavePreset" class="btn btn-success btn-sm">Speichern</button>
+                                    <button id="btnCancelEditPreset" class="btn btn-outline-secondary btn-sm">Abbrechen</button>
+                                </div>
+                            </div>
+                            <div id="presetList" class="preset-list border rounded" style="display:none;"></div>
+                            <div class="d-flex gap-2 pt-2 border-top">
+                                <button id="btnExportPresets" class="btn btn-dark btn-sm">Exportieren</button>
+                                <button id="btnImportPresetsToggle" class="btn btn-dark btn-sm">Importieren</button>
+                            </div>
+                            <div id="importArea" style="display:none;">
+                                <div id="importDropZone" class="import-zone rounded">
+                                    <div class="import-zone-title">JSON-Datei hierher ziehen</div>
+                                    <div class="import-zone-sub">oder antippen zum Auswählen</div>
+                                    <input id="importFileInput" type="file" accept=".json,application/json" style="display:none;">
+                                </div>
+                                <div id="importStatus" class="rounded p-2 mt-2" style="display:none;font-size:13px;font-weight:500;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AP Idle-Timer -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-header-label">AP Idle-Timer</div>
+                        <div class="mb-3">
+                            <label class="form-label form-label-upper" for="apTimerInput">Abschalt-Timer (Dauer ohne Client)</label>
+                            <div class="input-group input-group-sm">
+                                <input id="apTimerInput" type="text" class="form-control font-monospace" placeholder="z.B. 3m, 180s, 3:00" value="3:00">
+                                <button id="btnSetApTimer" class="btn btn-primary">Speichern</button>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="timer-display rounded p-3">
+                                    <div class="form-label-upper mb-1">Aktueller Wert</div>
+                                    <div class="timer-value" id="apTimerCurrent">3:00</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="timer-display-warning rounded p-3">
+                                    <div class="form-label-upper mb-1">Status</div>
+                                    <div id="apTimerStatus" class="fw-semibold" style="font-size:14px;color:var(--c-text-sec);">Wird geladen...</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-1 flex-wrap mb-2">
+                            <button class="ap-timer-quick quick-btn btn btn-sm rounded" data-seconds="60">1 Min</button>
+                            <button class="ap-timer-quick quick-btn btn btn-sm rounded" data-seconds="120">2 Min</button>
+                            <button class="ap-timer-quick quick-btn btn btn-sm rounded" data-seconds="180">3 Min</button>
+                            <button class="ap-timer-quick quick-btn btn btn-sm rounded" data-seconds="300">5 Min</button>
+                            <button class="ap-timer-quick quick-btn btn btn-sm rounded" data-seconds="600">10 Min</button>
+                        </div>
+                        <div class="form-hint">
+                            Eingabe in mehreren Formaten: <strong>3m</strong> (Minuten), <strong>180s</strong> (Sekunden),
+                            <strong>3:00</strong> (Min:Sek), oder einfach <strong>180</strong> (Sekunden).
+                            Bereich: 30 Sekunden &ndash; 10 Minuten.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div><!-- /row -->
     </div><!-- /container -->
 
     <!-- ============================================================
@@ -761,15 +349,12 @@
             socket.on('system:config', (cfg) => {
                 try {
                     if (!cfg) return;
-                    if (cfg.filterType !== undefined) {
-                        const sel = document.getElementById('filterType');
-                        if (sel) sel.value = (cfg.filterType === 2) ? 'lpf' : 'ma';
-                    }
                     if (cfg.noiseGate !== undefined) document.getElementById('noiseGate').value = cfg.noiseGate;
                     if (cfg.fsrMax !== undefined) document.getElementById('fsrMax').value = cfg.fsrMax;
+                    if (cfg.maWindow !== undefined) document.getElementById('maWindow').value = cfg.maWindow;
+                    if (cfg.lpfAlpha !== undefined) document.getElementById('lpfAlpha').value = cfg.lpfAlpha;
                     if (cfg.hidPollMs !== undefined) document.getElementById('hidPoll').value = cfg.hidPollMs;
                     if (cfg.hidMaxDelta !== undefined) document.getElementById('hidDelta').value = cfg.hidMaxDelta;
-                    updateFilterDescription();
                 } catch (err) {
                     console.warn('system:config error', err.message);
                 }
@@ -821,7 +406,6 @@
                 document.getElementById('table-filt-' + s).textContent = (data.filtered[s] || 0);
                 document.getElementById('table-norm-' + s).textContent = nv.toFixed(3);
             });
-
         }
 
         /* ==========================================================
@@ -854,9 +438,10 @@
             if (!socket || !socket.connected) { showError('Nicht verbunden'); return; }
 
             const payload = {
-                filter:    document.getElementById('filterType').value || 'ma',
                 noiseGate: Math.max(0, Math.min(4095, Math.floor(Number(document.getElementById('noiseGate').value) || 0))),
-                fsrMax:    Math.max(0, Math.min(4095, Math.floor(Number(document.getElementById('fsrMax').value) || 0)))
+                fsrMax:    Math.max(0, Math.min(4095, Math.floor(Number(document.getElementById('fsrMax').value) || 0))),
+                maWindow:  Math.max(0, Math.min(20, Math.floor(Number(document.getElementById('maWindow').value) || 0))),
+                lpfAlpha:  Math.max(0, Math.min(1, parseFloat(document.getElementById('lpfAlpha').value) || 0))
             };
 
             socket.emit('filter:set', payload, (ack) => {
@@ -870,15 +455,6 @@
                     setTimeout(() => { s.textContent = 'Nicht gesendet'; s.style.color = ''; }, 5000);
                 }
             });
-        }
-
-        function updateFilterDescription() {
-            const sel  = document.getElementById('filterType');
-            const desc = document.getElementById('filterDesc');
-            if (!sel || !desc) return;
-            desc.textContent = sel.value === 'ma'
-                ? 'Gleitend Mitteln (MA): Robust gegen Ausreisser, gute Rauschunterdrueckung bei moderater Verzoegerung.'
-                : 'LPF (Tiefpass): Reagiert glatter und weniger verzoegert bei langsamen Aenderungen, besser bei kontinuierlichen Signalen.';
         }
 
         /* ==========================================================
@@ -933,10 +509,10 @@
         function loadPresetSettings(presetId) {
             const p = allPresets.find(x => x.id === presetId);
             if (!p) return;
-            document.getElementById('filterType').value = p.filter_type || 'ma';
             document.getElementById('noiseGate').value  = p.noise_gate || 500;
             document.getElementById('fsrMax').value     = p.fsr_max || 4000;
-            updateFilterDescription();
+            document.getElementById('maWindow').value   = p.ma_window !== undefined ? p.ma_window : 6;
+            document.getElementById('lpfAlpha').value   = p.lpf_alpha !== undefined ? p.lpf_alpha : 0.90;
         }
 
         async function createPreset() {
@@ -950,9 +526,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name,
-                        filterType: document.getElementById('filterType').value,
                         noiseGate:  Number(document.getElementById('noiseGate').value),
                         fsrMax:     Number(document.getElementById('fsrMax').value),
+                        maWindow:   Number(document.getElementById('maWindow').value),
+                        lpfAlpha:   parseFloat(document.getElementById('lpfAlpha').value),
                         createdBy:  creator
                     })
                 });
@@ -967,10 +544,52 @@
             } catch (err) { showError('Fehler: ' + err.message); }
         }
 
+        function editPreset() {
+            const id = document.getElementById('presetSelect').value;
+            if (!id) { showError('Keine Voreinstellung ausgewählt'); return; }
+            const p = allPresets.find(x => x.id === Number(id));
+            if (!p) return;
+            
+            document.getElementById('presetEditName').value = p.name || '';
+            document.getElementById('presetEditForm').style.display = 'block';
+            document.getElementById('presetEditForm').dataset.presetId = id;
+        }
+
+        async function savePreset() {
+            const presetId = document.getElementById('presetEditForm').dataset.presetId;
+            const newName = document.getElementById('presetEditName').value.trim();
+            
+            if (!newName) { showError('Presetname erforderlich'); return; }
+            
+            try {
+                const resp = await fetch('/api/filter-presets/' + presetId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: newName,
+                        noiseGate:  Number(document.getElementById('noiseGate').value),
+                        fsrMax:     Number(document.getElementById('fsrMax').value),
+                        maWindow:   Number(document.getElementById('maWindow').value),
+                        lpfAlpha:   parseFloat(document.getElementById('lpfAlpha').value)
+                    })
+                });
+                if (!resp.ok) { const e = await resp.json(); showError('Fehler: ' + (e.error || 'Unbekannt')); return; }
+                
+                showError('');
+                document.getElementById('presetEditForm').style.display = 'none';
+                document.getElementById('presetSelect').value = '';
+                loadPresets();
+            } catch (err) { showError('Fehler: ' + err.message); }
+        }
+
+        function cancelEditPreset() {
+            document.getElementById('presetEditForm').style.display = 'none';
+        }
+
         async function deletePreset() {
             const id = document.getElementById('presetSelect').value;
-            if (!id) { showError('Keine Voreinstellung ausgewaehlt'); return; }
-            if (!confirm('Voreinstellung wirklich loeschen?')) return;
+            if (!id) { showError('Keine Voreinstellung ausgewählt'); return; }
+            if (!confirm('Voreinstellung wirklich löschen?')) return;
 
             try {
                 const resp = await fetch('/api/filter-presets/' + id, { method: 'DELETE' });
@@ -1008,7 +627,7 @@
         function validateImportFile(text) {
             if (text.length > 100 * 1024) return { data: null, error: 'Datei zu gross (max 100 KB)' };
             let parsed;
-            try { parsed = JSON.parse(text); } catch (e) { return { data: null, error: 'Ungueltiges JSON: ' + e.message }; }
+            try { parsed = JSON.parse(text); } catch (e) { return { data: null, error: 'Ungültiges JSON: ' + e.message }; }
 
             let presets;
             if (Array.isArray(parsed)) presets = parsed;
@@ -1020,8 +639,8 @@
 
             for (let i = 0; i < presets.length; i++) {
                 const p = presets[i];
-                if (!p || typeof p !== 'object' || Array.isArray(p)) return { data: null, error: 'Element ' + i + ': Kein gueltiges Preset-Objekt' };
-                if (!p.name || typeof p.name !== 'string')           return { data: null, error: 'Element ' + i + ': "name" fehlt oder ungueltig' };
+                if (!p || typeof p !== 'object' || Array.isArray(p)) return { data: null, error: 'Element ' + i + ': Kein gültiges Preset-Objekt' };
+                if (!p.name || typeof p.name !== 'string')           return { data: null, error: 'Element ' + i + ': "name" fehlt oder ungültig' };
             }
             return { data: parsed, error: null };
         }
@@ -1048,7 +667,6 @@
 
                 if (s.imported > 0) {
                     loadPresets();
-                    // Auto-close import area after successful import
                     setTimeout(() => {
                         const area = document.getElementById('importArea');
                         if (area) area.style.display = 'none';
@@ -1123,7 +741,6 @@
             if (inputEl)   inputEl.value = display;
             if (statusEl)  { statusEl.textContent = 'Gespeichert'; statusEl.style.color = 'var(--c-success)'; }
 
-            // Highlight active quick-button
             const currentSec = Math.round(ms / 1000);
             document.querySelectorAll('.ap-timer-quick').forEach(btn => {
                 btn.classList.toggle('active', parseInt(btn.dataset.seconds) === currentSec);
@@ -1156,14 +773,13 @@
         }
 
         /* ==========================================================
-         *  DOM Ready — wire up all event handlers
+         *  DOM Ready
          * ========================================================== */
         document.addEventListener('DOMContentLoaded', () => {
             initSocket();
 
             // --- Filter ---
             document.getElementById('btnSendFilter').addEventListener('click', sendFilterSettings);
-            document.getElementById('filterType').addEventListener('change', updateFilterDescription);
 
             // --- HID ---
             document.getElementById('btnSendHid').addEventListener('click', sendHidSettings);
@@ -1179,11 +795,15 @@
                 document.getElementById('presetCreateToggle').style.display = 'block';
             });
             document.getElementById('btnCreatePreset').addEventListener('click', createPreset);
+            document.getElementById('btnEditPreset').addEventListener('click', editPreset);
+            document.getElementById('btnEditPreset').addEventListener('click', editPreset);
             document.getElementById('btnLoadPreset').addEventListener('click', () => {
                 const id = Number(document.getElementById('presetSelect').value);
                 if (id) loadPresetSettings(id);
             });
             document.getElementById('btnDeletePreset').addEventListener('click', deletePreset);
+            document.getElementById('btnSavePreset').addEventListener('click', savePreset);
+            document.getElementById('btnCancelEditPreset').addEventListener('click', cancelEditPreset);
 
             // --- Export / Import ---
             document.getElementById('btnExportPresets').addEventListener('click', exportPresets);
@@ -1211,7 +831,7 @@
                 const sec = parseTimerInput(document.getElementById('apTimerInput').value);
                 if (sec === null || sec < 30 || sec > 600) {
                     const el = document.getElementById('apTimerStatus');
-                    if (el) { el.textContent = 'Ungueltiges Format (30s - 10min)'; el.style.color = 'var(--c-error)'; }
+                    if (el) { el.textContent = 'Ungültiges Format (30s - 10min)'; el.style.color = 'var(--c-error)'; }
                     return;
                 }
                 saveAPTimer(sec);
